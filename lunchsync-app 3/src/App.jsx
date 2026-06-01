@@ -7,6 +7,7 @@ import Nav from './components/Nav.jsx';
 import UpcomingView from './components/UpcomingView.jsx';
 import SpotsView from './components/SpotsView.jsx';
 import HistoryView from './components/HistoryView.jsx';
+import ProfileView from './components/ProfileView.jsx';
 
 const POLL_MS = 5000;
 
@@ -173,6 +174,39 @@ export default function App() {
     }));
   };
 
+  const createTeam = (name, emoji) => {
+    if (!me) return;
+    const id = `team_${Date.now()}`;
+    update(s => ({
+      ...s,
+      teams: [...(s.teams || []), { id, name, emoji, members: [me], createdBy: me }]
+    }));
+  };
+
+  const joinTeam = (teamId) => {
+    if (!me) return;
+    update(s => ({
+      ...s,
+      teams: (s.teams || []).map(t =>
+        t.id === teamId && !t.members.includes(me)
+          ? { ...t, members: [...t.members, me] }
+          : t
+      )
+    }));
+  };
+
+  const leaveTeam = (teamId) => {
+    if (!me) return;
+    update(s => ({
+      ...s,
+      teams: (s.teams || []).map(t =>
+        t.id === teamId
+          ? { ...t, members: t.members.filter(m => m !== me) }
+          : t
+      )
+    }));
+  };
+
   // ---------- render ----------
   if (loading || !state) {
     return <div className="app"><div className="loading">setting the table…</div></div>;
@@ -207,6 +241,16 @@ export default function App() {
           />
         )}
         {view === 'history' && <HistoryView lunches={state.lunches} />}
+        {view === 'profile' && (
+          <ProfileView
+            me={me}
+            teams={state.teams || []}
+            lunches={state.lunches}
+            createTeam={createTeam}
+            joinTeam={joinTeam}
+            leaveTeam={leaveTeam}
+          />
+        )}
       </main>
       <footer className="footer">
         <span>state syncs every {POLL_MS / 1000}s · {state.lunches.length} lunches scheduled</span>

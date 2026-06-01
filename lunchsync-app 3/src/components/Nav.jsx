@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Clock, User, Sparkles } from 'lucide-react';
 import { isPast, daysUntil } from '../data.js';
 
 export default function Nav({ view, setView, lunches }) {
@@ -7,7 +7,8 @@ export default function Nav({ view, setView, lunches }) {
   const items = [
     { id: 'upcoming', label: 'Upcoming', icon: Calendar },
     { id: 'spots', label: 'Spots', icon: MapPin },
-    { id: 'history', label: 'History', icon: Clock }
+    { id: 'history', label: 'History', icon: Clock },
+    { id: 'profile', label: 'Profile', icon: User }
   ];
   return (
     <nav className="nav">
