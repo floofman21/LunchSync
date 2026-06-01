@@ -32,7 +32,16 @@ export function defaultState() {
   return {
     version: 1,
     lunches: generateLunches(),
-    restaurants: SEED_RESTAURANTS.map(name => ({ name, addedBy: 'system' }))
+    restaurants: SEED_RESTAURANTS.map(name => ({ name, addedBy: 'system' })),
+    teams: [
+      {
+        id: 'team_main',
+        name: 'Main Crew',
+        emoji: '🥪',
+        members: [...TEAM],
+        createdBy: 'system'
+      }
+    ]
   };
 }
 
