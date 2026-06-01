@@ -18,6 +18,8 @@ export function generateLunches() {
       date: iso,
       time: '12:15',
       restaurant: i === 0 ? 'Two Goose' : null,
+      lockedBy: null,
+      vibes: {},
       rsvps: i === 0
         ? { Armand: 'yes', Connor: 'yes', Heather: 'yes', Mike: 'yes', Dan: 'no', Elina: 'no', Nate: 'no', Pip: 'no' }
         : {},
@@ -41,7 +43,10 @@ export function defaultState() {
         members: [...TEAM],
         createdBy: 'system'
       }
-    ]
+    ],
+    ratings: {},
+    dietary: {},
+    restaurantTags: {}
   };
 }
 

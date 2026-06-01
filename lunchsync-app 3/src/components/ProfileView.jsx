@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Users, Plus, LogOut, LogIn, Star } from 'lucide-react';
+import { Users, Plus, LogOut, LogIn, Star, Salad } from 'lucide-react';
+
+const DIETARY_OPTIONS = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'dairy-free', 'nut-free'];
 
 const TEAM_EMOJIS = ['🍕', '🌮', '🍜', '🥗', '🍣', '🌯', '🍔', '🥘'];
 
-export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, leaveTeam }) {
+export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, leaveTeam, dietary, setDietary }) {
+  const myDietary = (dietary || {})[me] || [];
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('🍕');
@@ -38,6 +41,36 @@ export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, 
             <span className="profile-stat-num">{lunchesAttended}</span>
             <span className="profile-stat-label">lunches attended</span>
           </div>
+        </div>
+      </div>
+
+      <div className="profile-section-header">
+        <Salad size={15} />
+        <span>dietary restrictions</span>
+      </div>
+
+      <div className="dietary-section">
+        <div className="dietary-hint">
+          Tag your restrictions — the app will flag incompatible restaurants during voting.
+        </div>
+        <div className="dietary-tags">
+          {DIETARY_OPTIONS.map(tag => {
+            const active = myDietary.includes(tag);
+            return (
+              <button
+                key={tag}
+                className={`dietary-tag ${active ? 'active' : ''}`}
+                onClick={() => {
+                  const next = active
+                    ? myDietary.filter(t => t !== tag)
+                    : [...myDietary, tag];
+                  setDietary(next);
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
       </div>
 
