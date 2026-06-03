@@ -125,9 +125,43 @@ export default function App() {
     update(s => ({
       ...s,
       lunches: s.lunches.map(l =>
-        l.id === lunchId ? { ...l, restaurant: name } : l
+        l.id === lunchId ? { ...l, restaurant: name, lockedBy: name ? me : null } : l
       )
     }));
+  };
+
+  const setVibe = (lunchId, vibe) => {
+    if (!me) return;
+    update(s => ({
+      ...s,
+      lunches: s.lunches.map(l => {
+        if (l.id !== lunchId) return l;
+        const prev = (l.vibes || {})[me];
+        const next = prev === vibe ? null : vibe;
+        const newVibes = { ...(l.vibes || {}), [me]: next };
+        if (next === null) delete newVibes[me];
+        return { ...l, vibes: newVibes };
+      })
+    }));
+  };
+
+  const setRating = (lunchId, rating) => {
+    if (!me) return;
+    update(s => {
+      const existing = { ...((s.ratings || {})[lunchId] || {}) };
+      if (rating === null) delete existing[me];
+      else existing[me] = rating;
+      return { ...s, ratings: { ...(s.ratings || {}), [lunchId]: existing } };
+    });
+  };
+
+  const setDietary = (tags) => {
+    if (!me) return;
+    update(s => ({ ...s, dietary: { ...(s.dietary || {}), [me]: tags } }));
+  };
+
+  const tagRestaurant = (restaurantName, tags) => {
+    update(s => ({ ...s, restaurantTags: { ...(s.restaurantTags || {}), [restaurantName]: tags } }));
   };
 
   const toggleProposal = (lunchId, restaurantName) => {
@@ -230,6 +264,9 @@ export default function App() {
             setRestaurant={setRestaurant}
             toggleProposal={toggleProposal}
             setNotes={setNotes}
+            setVibe={setVibe}
+            dietary={state.dietary || {}}
+            restaurantTags={state.restaurantTags || {}}
           />
         )}
         {view === 'spots' && (
@@ -238,9 +275,20 @@ export default function App() {
             lunches={state.lunches}
             addRestaurant={addRestaurant}
             removeRestaurant={removeRestaurant}
+            ratings={state.ratings || {}}
+            dietary={state.dietary || {}}
+            restaurantTags={state.restaurantTags || {}}
+            tagRestaurant={tagRestaurant}
           />
         )}
-        {view === 'history' && <HistoryView lunches={state.lunches} />}
+        {view === 'history' && (
+          <HistoryView
+            lunches={state.lunches}
+            me={me}
+            ratings={state.ratings || {}}
+            setRating={setRating}
+          />
+        )}
         {view === 'profile' && (
           <ProfileView
             me={me}
@@ -249,6 +297,8 @@ export default function App() {
             createTeam={createTeam}
             joinTeam={joinTeam}
             leaveTeam={leaveTeam}
+            dietary={state.dietary || {}}
+            setDietary={setDietary}
           />
         )}
       </main>
