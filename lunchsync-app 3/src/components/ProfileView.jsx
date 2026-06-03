@@ -1,15 +1,37 @@
 import React, { useState } from 'react';
-import { Users, Plus, LogOut, LogIn, Star, Salad } from 'lucide-react';
+import { Users, Plus, LogOut, LogIn, Star, Salad, Hash, Copy, Check } from 'lucide-react';
 
 const DIETARY_OPTIONS = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'dairy-free', 'nut-free'];
-
 const TEAM_EMOJIS = ['🍕', '🌮', '🍜', '🥗', '🍣', '🌯', '🍔', '🥘'];
 
-export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, leaveTeam, dietary, setDietary }) {
+function CopyCode({ code }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+  return (
+    <div className="team-code-row">
+      <span className="team-code-label">invite code</span>
+      <span className="team-code-badge">{code}</span>
+      <button className="team-code-copy" onClick={handleCopy} title="copy code">
+        {copied ? <Check size={12} /> : <Copy size={12} />}
+      </button>
+    </div>
+  );
+}
+
+export default function ProfileView({
+  me, teams, lunches, createTeam, joinTeam, joinTeamByCode, leaveTeam, dietary, setDietary
+}) {
   const myDietary = (dietary || {})[me] || [];
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('🍕');
+  const [codeInput, setCodeInput] = useState('');
+  const [codeMsg, setCodeMsg] = useState(null);
 
   const myTeams = teams.filter(t => t.members.includes(me));
   const otherTeams = teams.filter(t => !t.members.includes(me));
@@ -22,6 +44,19 @@ export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, 
     setNewName('');
     setNewEmoji('🍕');
     setShowCreate(false);
+  };
+
+  const handleJoinByCode = () => {
+    const result = joinTeamByCode(codeInput);
+    if (result === true) {
+      setCodeMsg({ ok: true, text: 'joined!' });
+      setCodeInput('');
+    } else if (result === 'already') {
+      setCodeMsg({ ok: false, text: "you're already on that team" });
+    } else {
+      setCodeMsg({ ok: false, text: 'code not found — double-check it' });
+    }
+    setTimeout(() => setCodeMsg(null), 3000);
   };
 
   return (
@@ -61,9 +96,7 @@ export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, 
                 key={tag}
                 className={`dietary-tag ${active ? 'active' : ''}`}
                 onClick={() => {
-                  const next = active
-                    ? myDietary.filter(t => t !== tag)
-                    : [...myDietary, tag];
+                  const next = active ? myDietary.filter(t => t !== tag) : [...myDietary, tag];
                   setDietary(next);
                 }}
               >
@@ -80,7 +113,7 @@ export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, 
       </div>
 
       {myTeams.length === 0 && (
-        <div className="profile-empty">not on any teams yet — join one below!</div>
+        <div className="profile-empty">not on any teams yet — create one below or enter a team code!</div>
       )}
 
       <div className="team-grid">
@@ -96,14 +129,36 @@ export default function ProfileView({ me, teams, lunches, createTeam, joinTeam, 
                 <span key={m} className={`team-member-pill ${m === me ? 'team-member-me' : ''}`}>{m}</span>
               ))}
             </div>
-            {team.id !== 'team_main' && (
-              <button className="team-action-btn btn-leave" onClick={() => leaveTeam(team.id)}>
-                <LogOut size={12} /> leave
-              </button>
-            )}
+            {team.joinCode && <CopyCode code={team.joinCode} />}
+            <button className="team-action-btn btn-leave" onClick={() => leaveTeam(team.id)}>
+              <LogOut size={12} /> leave
+            </button>
           </div>
         ))}
       </div>
+
+      <div className="profile-section-header">
+        <Hash size={15} />
+        <span>join by code</span>
+      </div>
+      <div className="join-code-form">
+        <input
+          className="join-code-input"
+          placeholder="enter team code (e.g. ABC123)"
+          value={codeInput}
+          onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeMsg(null); }}
+          onKeyDown={e => e.key === 'Enter' && handleJoinByCode()}
+          maxLength={8}
+        />
+        <button className="join-code-btn" onClick={handleJoinByCode} disabled={!codeInput.trim()}>
+          join
+        </button>
+      </div>
+      {codeMsg && (
+        <div className={`join-code-msg ${codeMsg.ok ? 'join-code-ok' : 'join-code-err'}`}>
+          {codeMsg.text}
+        </div>
+      )}
 
       {otherTeams.length > 0 && (
         <>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { defaultState } from './data.js';
+import { defaultState, generateJoinCode } from './data.js';
 import { meStore, fetchState, saveState } from './api.js';
 import Gate from './components/Gate.jsx';
 import Header from './components/Header.jsx';
@@ -10,6 +10,22 @@ import HistoryView from './components/HistoryView.jsx';
 import ProfileView from './components/ProfileView.jsx';
 
 const POLL_MS = 5000;
+
+function migrateState(s) {
+  let changed = false;
+  // Drop the old system-seeded Main Crew team that had static fake members
+  let teams = (s.teams || []).filter(t => {
+    if (t.id === 'team_main' && t.createdBy === 'system') { changed = true; return false; }
+    return true;
+  });
+  // Backfill join codes for any team that was created before this feature
+  teams = teams.map(t => {
+    if (!t.joinCode) { changed = true; return { ...t, joinCode: generateJoinCode() }; }
+    return t;
+  });
+  if (!changed) return s;
+  return { ...s, teams, version: (s.version || 0) + 1 };
+}
 
 export default function App() {
   const [me, setMe] = useState(meStore.get());
@@ -25,9 +41,19 @@ export default function App() {
   stateRef.current = state;
   const pendingSaveRef = useRef(null);
 
-  const handlePickMe = (name) => {
+  const handlePickMe = (name, teamId) => {
     meStore.set(name);
     setMe(name);
+    if (teamId && stateRef.current) {
+      update(s => ({
+        ...s,
+        teams: (s.teams || []).map(t =>
+          t.id === teamId && !t.members.includes(name)
+            ? { ...t, members: [...t.members, name] }
+            : t
+        )
+      }));
+    }
   };
 
   const handleSwitchUser = () => {
@@ -41,14 +67,14 @@ export default function App() {
     (async () => {
       try {
         setLoading(true);
-        const s = await fetchState();
+        const raw = await fetchState();
         if (cancelled) return;
-        setState(s || defaultState());
+        const s = migrateState(raw || defaultState());
+        setState(s);
+        if (s !== raw) saveState(s).catch(() => {});
         setSyncStatus('synced');
       } catch (e) {
         if (cancelled) return;
-        // server unreachable — fall back to a fresh local state so the
-        // UI still works. Saves will retry once the server comes back.
         setState(defaultState());
         setSyncStatus('offline');
       } finally {
@@ -213,8 +239,19 @@ export default function App() {
     const id = `team_${Date.now()}`;
     update(s => ({
       ...s,
-      teams: [...(s.teams || []), { id, name, emoji, members: [me], createdBy: me }]
+      teams: [...(s.teams || []), { id, name, emoji, members: [me], createdBy: me, joinCode: generateJoinCode() }]
     }));
+  };
+
+  const joinTeamByCode = (code) => {
+    if (!me || !code.trim()) return false;
+    const team = (stateRef.current?.teams || []).find(
+      t => t.joinCode?.toLowerCase() === code.trim().toLowerCase()
+    );
+    if (!team) return false;
+    if (team.members.includes(me)) return 'already';
+    joinTeam(team.id);
+    return true;
   };
 
   const joinTeam = (teamId) => {
@@ -247,7 +284,7 @@ export default function App() {
   }
 
   if (!me) {
-    return <Gate onPick={handlePickMe} />;
+    return <Gate onPick={handlePickMe} teams={state.teams || []} />;
   }
 
   return (
@@ -259,6 +296,7 @@ export default function App() {
           <UpcomingView
             lunches={state.lunches}
             me={me}
+            teams={state.teams || []}
             restaurants={state.restaurants}
             setRsvp={setRsvp}
             setRestaurant={setRestaurant}
@@ -296,6 +334,7 @@ export default function App() {
             lunches={state.lunches}
             createTeam={createTeam}
             joinTeam={joinTeam}
+            joinTeamByCode={joinTeamByCode}
             leaveTeam={leaveTeam}
             dietary={state.dietary || {}}
             setDietary={setDietary}
