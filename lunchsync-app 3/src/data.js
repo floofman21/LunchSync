@@ -1,10 +1,15 @@
-export const TEAM = ['Armand', 'Connor', 'Dan', 'Elina', 'Heather', 'Mike', 'Nate', 'Pip'];
-
 export const SEED_RESTAURANTS = [
   'Allday Pizza', 'Bird Bird Biscuit', 'Cuantos Tacos', "Curra's",
   'Don Vegas Tacos', 'Favorites Pizza', 'House Park BBQ', 'Meat & Bread',
   "Phoebe's Downtown", 'Taco Joint', 'Two Goose', 'Umarell'
 ];
+
+export function generateJoinCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
 export function generateLunches() {
   const lunches = [];
@@ -17,12 +22,10 @@ export function generateLunches() {
       id: `lunch_${iso}`,
       date: iso,
       time: '12:15',
-      restaurant: i === 0 ? 'Two Goose' : null,
+      restaurant: null,
       lockedBy: null,
       vibes: {},
-      rsvps: i === 0
-        ? { Armand: 'yes', Connor: 'yes', Heather: 'yes', Mike: 'yes', Dan: 'no', Elina: 'no', Nate: 'no', Pip: 'no' }
-        : {},
+      rsvps: {},
       proposedRestaurants: {},
       notes: ''
     });
@@ -35,15 +38,7 @@ export function defaultState() {
     version: 1,
     lunches: generateLunches(),
     restaurants: SEED_RESTAURANTS.map(name => ({ name, addedBy: 'system' })),
-    teams: [
-      {
-        id: 'team_main',
-        name: 'Main Crew',
-        emoji: '🥪',
-        members: [...TEAM],
-        createdBy: 'system'
-      }
-    ],
+    teams: [],
     ratings: {},
     dietary: {},
     restaurantTags: {}

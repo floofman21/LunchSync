@@ -1,5 +1,5 @@
 import React from 'react';
-import { TEAM, fmtDate, isPast } from '../data.js';
+import { fmtDate, isPast } from '../data.js';
 
 const RATINGS = [
   { key: 'fire',  emoji: '🔥', label: 'loved it' },
@@ -17,8 +17,8 @@ export default function HistoryView({ lunches, me, ratings, setRating }) {
       <div className="section-label">the archives</div>
       <div className="history-list">
         {past.map(l => {
-          const yesCount = Object.values(l.rsvps).filter(s => s === 'yes').length;
-          const attendees = TEAM.filter(n => l.rsvps[n] === 'yes');
+          const attendees = Object.entries(l.rsvps).filter(([, s]) => s === 'yes').map(([n]) => n);
+          const yesCount = attendees.length;
           const lunchRatings = (ratings || {})[l.id] || {};
           const myRating = lunchRatings[me];
           const counts = { fire: 0, meh: 0, never: 0 };

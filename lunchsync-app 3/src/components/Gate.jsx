@@ -1,21 +1,59 @@
-import React from 'react';
-import { TEAM } from '../data.js';
+import React, { useState } from 'react';
 
-export default function Gate({ onPick }) {
+export default function Gate({ onPick, teams }) {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) { setError('enter your name to continue'); return; }
+
+    if (code.trim()) {
+      const team = (teams || []).find(
+        t => t.joinCode?.toLowerCase() === code.trim().toLowerCase()
+      );
+      if (!team) { setError('team code not found — double-check it'); return; }
+      onPick(trimmed, team.id);
+    } else {
+      onPick(trimmed, null);
+    }
+  };
+
   return (
     <div className="gate">
       <div className="gate-card">
-        <div className="gate-eyebrow">it's lunch time at</div>
+        <div className="gate-eyebrow">welcome to</div>
         <h1 className="gate-title">LunchSync</h1>
-        <div className="gate-sub">who's hungry?</div>
-        <div className="gate-names">
-          {TEAM.map(name => (
-            <button key={name} className="gate-name" onClick={() => onPick(name)}>
-              {name}
-            </button>
-          ))}
+        <div className="gate-sub">your team lunch planner</div>
+
+        <div className="gate-fields">
+          <input
+            className="gate-input"
+            placeholder="your name"
+            value={name}
+            onChange={e => { setName(e.target.value); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            autoFocus
+          />
+          <input
+            className="gate-input gate-input-secondary"
+            placeholder="team code (optional)"
+            value={code}
+            onChange={e => { setCode(e.target.value.toUpperCase()); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          />
+          {error && <div className="gate-error">{error}</div>}
+          <button
+            className="gate-submit"
+            onClick={handleSubmit}
+            disabled={!name.trim()}
+          >
+            let's eat →
+          </button>
         </div>
-        <div className="gate-foot">tap yourself · we'll remember 👋</div>
+
+        <div className="gate-foot">no account needed · name saved in your browser</div>
       </div>
     </div>
   );

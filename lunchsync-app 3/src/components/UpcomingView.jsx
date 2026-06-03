@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Check, X, HelpCircle, MapPin } from 'lucide-react';
-import { TEAM, fmtDate, fmtDateLong, isPast, isToday, daysUntil } from '../data.js';
+import { fmtDate, fmtDateLong, isPast, isToday, daysUntil } from '../data.js';
 
 const VIBES = ['quick bite', 'sit-down', 'adventurous', 'comfort food', 'patio'];
 
@@ -73,7 +73,7 @@ function SpinWheel({ attendees }) {
 }
 
 export default function UpcomingView({
-  lunches, me, restaurants,
+  lunches, me, teams, restaurants,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
   dietary, restaurantTags
 }) {
@@ -87,6 +87,7 @@ export default function UpcomingView({
       <NextLunchCard
         lunch={next}
         me={me}
+        teams={teams}
         restaurants={restaurants}
         allLunches={lunches}
         setRsvp={setRsvp}
@@ -112,15 +113,20 @@ export default function UpcomingView({
 }
 
 function NextLunchCard({
-  lunch, me, restaurants, allLunches,
+  lunch, me, teams, restaurants, allLunches,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
   dietary, restaurantTags
 }) {
   const myRsvp = lunch.rsvps[me];
-  const yesNames = TEAM.filter(n => lunch.rsvps[n] === 'yes');
+  const allKnownMembers = [...new Set([
+    ...(teams || []).flatMap(t => t.members),
+    ...Object.keys(lunch.rsvps || {}),
+    ...(me ? [me] : [])
+  ])];
+  const yesNames = allKnownMembers.filter(n => lunch.rsvps[n] === 'yes');
   const noCount = Object.values(lunch.rsvps).filter(s => s === 'no').length;
   const maybeCount = Object.values(lunch.rsvps).filter(s => s === 'maybe').length;
-  const pending = TEAM.filter(n => !lunch.rsvps[n]);
+  const pending = allKnownMembers.filter(n => !lunch.rsvps[n]);
   const d = daysUntil(lunch.date);
   const [showAllSpots, setShowAllSpots] = useState(false);
 
@@ -166,7 +172,7 @@ function NextLunchCard({
           {pending.length > 0 && <span className="stat-pending">{pending.length} haven't replied</span>}
         </div>
         <div className="rsvp-people">
-          {TEAM.map(n => {
+          {allKnownMembers.map(n => {
             const s = lunch.rsvps[n];
             return (
               <div key={n} className={`person person-${s || 'pending'}`}>
@@ -177,6 +183,9 @@ function NextLunchCard({
               </div>
             );
           })}
+          {allKnownMembers.length === 0 && (
+            <div className="rsvp-empty-hint">join or create a team in Profile to see teammates here</div>
+          )}
         </div>
       </div>
 
