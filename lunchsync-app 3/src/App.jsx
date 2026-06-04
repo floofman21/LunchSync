@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { defaultState, generateJoinCode } from './data.js';
-import { meStore, fetchState, saveState } from './api.js';
+import { defaultRegistry, defaultTeamState, generateJoinCode } from './data.js';
+import { meStore, activeTeamStore, fetchRegistry, saveRegistry, fetchTeamState, saveTeamState } from './api.js';
 import Gate from './components/Gate.jsx';
 import Header from './components/Header.jsx';
 import Nav from './components/Nav.jsx';
@@ -11,58 +11,157 @@ import ProfileView from './components/ProfileView.jsx';
 
 const POLL_MS = 5000;
 
-const STATIC_NAMES = new Set(['Armand', 'Connor', 'Dan', 'Elina', 'Heather', 'Mike', 'Nate', 'Pip']);
-
-function migrateState(s) {
-  let changed = false;
-  // Drop any system-seeded teams with the old static member list
-  let teams = (s.teams || []).filter(t => {
-    if (t.createdBy === 'system') { changed = true; return false; }
-    return true;
-  });
-  // Strip static seed names out of any user-created teams that somehow got them
-  teams = teams.map(t => {
-    const cleaned = t.members.filter(m => !STATIC_NAMES.has(m) || t.createdBy === m);
-    if (cleaned.length !== t.members.length) { changed = true; return { ...t, members: cleaned }; }
-    return t;
-  });
-  // Drop teams that end up empty after stripping static names
-  teams = teams.filter(t => { if (t.members.length === 0) { changed = true; return false; } return true; });
-  // Backfill join codes for any team created before this feature
-  teams = teams.map(t => {
-    if (!t.joinCode) { changed = true; return { ...t, joinCode: generateJoinCode() }; }
-    return t;
-  });
-  if (!changed) return s;
-  return { ...s, teams, version: (s.version || 0) + 1 };
-}
-
 export default function App() {
   const [me, setMe] = useState(meStore.get());
 
-  // app state
-  const [state, setState] = useState(null);
+  const [registry, setRegistry] = useState(null);        // { version, teams: [...] }
+  const [teamState, setTeamState] = useState(null);      // { version, teamId, lunches, restaurants, … }
+  const [activeTeamId, setActiveTeamId] = useState(activeTeamStore.get());
+
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('upcoming');
-  const [syncStatus, setSyncStatus] = useState('synced'); // 'synced' | 'syncing' | 'offline'
+  const [syncStatus, setSyncStatus] = useState('synced');
 
-  // refs to avoid stale closures in poll/save
-  const stateRef = useRef(null);
-  stateRef.current = state;
-  const pendingSaveRef = useRef(null);
+  const registryRef = useRef(null);
+  registryRef.current = registry;
+  const teamStateRef = useRef(null);
+  teamStateRef.current = teamState;
+  const activeTeamIdRef = useRef(activeTeamId);
+  activeTeamIdRef.current = activeTeamId;
+  const meRef = useRef(me);
+  meRef.current = me;
 
-  const handlePickMe = (name, teamId) => {
+  const pendingRegistrySaveRef = useRef(null);
+  const pendingTeamSaveRef = useRef(null);
+
+  // ---------- switch active team ----------
+  const switchToTeamId = useCallback(async (teamId) => {
+    activeTeamStore.set(teamId);
+    setActiveTeamId(teamId);
+    setTeamState(defaultTeamState(teamId)); // show defaults immediately while loading
+    try {
+      const ts = await fetchTeamState(teamId);
+      if (ts) setTeamState(ts);
+    } catch {
+      // keep the default
+    }
+  }, []);
+
+  // ---------- initial load ----------
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const reg = await fetchRegistry();
+        if (cancelled) return;
+        const resolvedReg = reg || defaultRegistry();
+        setRegistry(resolvedReg);
+
+        const currentMe = meStore.get();
+        const myTeams = resolvedReg.teams.filter(t => t.members.includes(currentMe));
+        const storedId = activeTeamStore.get();
+        const validStored = myTeams.find(t => t.id === storedId);
+        const teamId = validStored ? storedId : (myTeams[0]?.id || null);
+
+        if (teamId) {
+          activeTeamStore.set(teamId);
+          setActiveTeamId(teamId);
+          const ts = await fetchTeamState(teamId);
+          if (!cancelled) setTeamState(ts || defaultTeamState(teamId));
+        }
+        setSyncStatus('synced');
+      } catch {
+        if (!cancelled) {
+          setRegistry(defaultRegistry());
+          setSyncStatus('offline');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ---------- polling ----------
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (pendingRegistrySaveRef.current || pendingTeamSaveRef.current) return;
+      try {
+        const [reg, ts] = await Promise.all([
+          fetchRegistry(),
+          activeTeamIdRef.current ? fetchTeamState(activeTeamIdRef.current) : Promise.resolve(null)
+        ]);
+        if (reg && (!registryRef.current || reg.version > registryRef.current.version)) {
+          setRegistry(reg);
+        }
+        if (ts && (!teamStateRef.current || ts.version > teamStateRef.current.version)) {
+          setTeamState(ts);
+        }
+        setSyncStatus('synced');
+      } catch {
+        setSyncStatus('offline');
+      }
+    }, POLL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ---------- registry update ----------
+  const updateRegistry = useCallback(async (mutator) => {
+    const current = registryRef.current;
+    if (!current) return;
+    const next = { ...mutator(current), version: (current.version || 0) + 1 };
+    setRegistry(next);
+    setSyncStatus('syncing');
+    const savePromise = (async () => {
+      try {
+        await saveRegistry(next);
+        setSyncStatus('synced');
+      } catch {
+        try { await new Promise(r => setTimeout(r, 800)); await saveRegistry(next); setSyncStatus('synced'); }
+        catch { setSyncStatus('offline'); }
+      } finally {
+        if (pendingRegistrySaveRef.current === savePromise) pendingRegistrySaveRef.current = null;
+      }
+    })();
+    pendingRegistrySaveRef.current = savePromise;
+  }, []);
+
+  // ---------- team state update ----------
+  const updateTeamState = useCallback(async (mutator) => {
+    const current = teamStateRef.current;
+    if (!current) return;
+    const next = { ...mutator(current), version: (current.version || 0) + 1 };
+    setTeamState(next);
+    setSyncStatus('syncing');
+    const savePromise = (async () => {
+      try {
+        await saveTeamState(next);
+        setSyncStatus('synced');
+      } catch {
+        try { await new Promise(r => setTimeout(r, 800)); await saveTeamState(next); setSyncStatus('synced'); }
+        catch { setSyncStatus('offline'); }
+      } finally {
+        if (pendingTeamSaveRef.current === savePromise) pendingTeamSaveRef.current = null;
+      }
+    })();
+    pendingTeamSaveRef.current = savePromise;
+  }, []);
+
+  // ---------- auth ----------
+  const handlePickMe = async (name, teamId) => {
     meStore.set(name);
     setMe(name);
-    if (teamId && stateRef.current) {
-      update(s => ({
-        ...s,
-        teams: (s.teams || []).map(t =>
+    if (teamId) {
+      await updateRegistry(r => ({
+        ...r,
+        teams: r.teams.map(t =>
           t.id === teamId && !t.members.includes(name)
             ? { ...t, members: [...t.members, name] }
             : t
         )
       }));
+      await switchToTeamId(teamId);
     }
   };
 
@@ -71,85 +170,64 @@ export default function App() {
     setMe('');
   };
 
-  // ---------- initial load ----------
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const raw = await fetchState();
-        if (cancelled) return;
-        const s = migrateState(raw || defaultState());
-        setState(s);
-        if (s !== raw) saveState(s).catch(() => {});
-        setSyncStatus('synced');
-      } catch (e) {
-        if (cancelled) return;
-        setState(defaultState());
-        setSyncStatus('offline');
-      } finally {
-        if (!cancelled) setLoading(false);
+  // ---------- team mutations (registry) ----------
+  const createTeam = async (name, emoji) => {
+    if (!me) return;
+    const id = `team_${Date.now()}`;
+    const joinCode = generateJoinCode();
+    const newTeamState = defaultTeamState(id);
+    await updateRegistry(r => ({
+      ...r,
+      teams: [...r.teams, { id, name, emoji, members: [me], createdBy: me, joinCode }]
+    }));
+    saveTeamState(newTeamState).catch(() => {});
+    await switchToTeamId(id);
+  };
+
+  const joinTeamByCode = async (code) => {
+    if (!me || !code.trim()) return false;
+    const team = (registryRef.current?.teams || []).find(
+      t => t.joinCode?.toLowerCase() === code.trim().toLowerCase()
+    );
+    if (!team) return false;
+    if (team.members.includes(me)) return 'already';
+    await updateRegistry(r => ({
+      ...r,
+      teams: r.teams.map(t =>
+        t.id === team.id && !t.members.includes(me)
+          ? { ...t, members: [...t.members, me] }
+          : t
+      )
+    }));
+    await switchToTeamId(team.id);
+    return true;
+  };
+
+  const leaveTeam = (teamId) => {
+    if (!me) return;
+    const currentTeams = registryRef.current?.teams || [];
+    updateRegistry(r => ({
+      ...r,
+      teams: r.teams.map(t =>
+        t.id === teamId ? { ...t, members: t.members.filter(m => m !== me) } : t
+      )
+    }));
+    if (activeTeamId === teamId) {
+      const next = currentTeams.find(t => t.id !== teamId && t.members.includes(me));
+      if (next) {
+        switchToTeamId(next.id);
+      } else {
+        activeTeamStore.clear();
+        setActiveTeamId(null);
+        setTeamState(null);
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    }
+  };
 
-  // poll for updates from teammates
-  useEffect(() => {
-    if (!state) return;
-    const interval = setInterval(async () => {
-      // skip the poll if we have an outbound save in flight — we'll be the
-      // freshest version anyway, no need to clobber our optimistic state
-      if (pendingSaveRef.current) return;
-      try {
-        const s = await fetchState();
-        if (!s) return;
-        if (!stateRef.current || s.version > stateRef.current.version) {
-          setState(s);
-        }
-        setSyncStatus('synced');
-      } catch {
-        setSyncStatus('offline');
-      }
-    }, POLL_MS);
-    return () => clearInterval(interval);
-  }, [state]);
-
-  // ---------- mutations ----------
-  const update = useCallback(async (mutator) => {
-    const current = stateRef.current;
-    if (!current) return;
-    const next = {
-      ...mutator(current),
-      version: (current.version || 0) + 1
-    };
-    setState(next);
-    setSyncStatus('syncing');
-
-    const savePromise = (async () => {
-      try {
-        await saveState(next);
-        setSyncStatus('synced');
-      } catch {
-        try {
-          await new Promise(r => setTimeout(r, 800));
-          await saveState(next);
-          setSyncStatus('synced');
-        } catch {
-          setSyncStatus('offline');
-        }
-      } finally {
-        if (pendingSaveRef.current === savePromise) {
-          pendingSaveRef.current = null;
-        }
-      }
-    })();
-    pendingSaveRef.current = savePromise;
-  }, []);
-
+  // ---------- team state mutations ----------
   const setRsvp = (lunchId, status) => {
     if (!me) return;
-    update(s => ({
+    updateTeamState(s => ({
       ...s,
       lunches: s.lunches.map(l =>
         l.id === lunchId ? { ...l, rsvps: { ...l.rsvps, [me]: status } } : l
@@ -158,7 +236,7 @@ export default function App() {
   };
 
   const setRestaurant = (lunchId, name) => {
-    update(s => ({
+    updateTeamState(s => ({
       ...s,
       lunches: s.lunches.map(l =>
         l.id === lunchId ? { ...l, restaurant: name, lockedBy: name ? me : null } : l
@@ -168,7 +246,7 @@ export default function App() {
 
   const setVibe = (lunchId, vibe) => {
     if (!me) return;
-    update(s => ({
+    updateTeamState(s => ({
       ...s,
       lunches: s.lunches.map(l => {
         if (l.id !== lunchId) return l;
@@ -183,7 +261,7 @@ export default function App() {
 
   const setRating = (lunchId, rating) => {
     if (!me) return;
-    update(s => {
+    updateTeamState(s => {
       const existing = { ...((s.ratings || {})[lunchId] || {}) };
       if (rating === null) delete existing[me];
       else existing[me] = rating;
@@ -193,23 +271,21 @@ export default function App() {
 
   const setDietary = (tags) => {
     if (!me) return;
-    update(s => ({ ...s, dietary: { ...(s.dietary || {}), [me]: tags } }));
+    updateTeamState(s => ({ ...s, dietary: { ...(s.dietary || {}), [me]: tags } }));
   };
 
   const tagRestaurant = (restaurantName, tags) => {
-    update(s => ({ ...s, restaurantTags: { ...(s.restaurantTags || {}), [restaurantName]: tags } }));
+    updateTeamState(s => ({ ...s, restaurantTags: { ...(s.restaurantTags || {}), [restaurantName]: tags } }));
   };
 
   const toggleProposal = (lunchId, restaurantName) => {
     if (!me) return;
-    update(s => ({
+    updateTeamState(s => ({
       ...s,
       lunches: s.lunches.map(l => {
         if (l.id !== lunchId) return l;
         const current = l.proposedRestaurants[restaurantName] || [];
-        const updated = current.includes(me)
-          ? current.filter(n => n !== me)
-          : [...current, me];
+        const updated = current.includes(me) ? current.filter(n => n !== me) : [...current, me];
         const newProposals = { ...l.proposedRestaurants };
         if (updated.length === 0) delete newProposals[restaurantName];
         else newProposals[restaurantName] = updated;
@@ -219,7 +295,7 @@ export default function App() {
   };
 
   const setNotes = (lunchId, notes) => {
-    update(s => ({
+    updateTeamState(s => ({
       ...s,
       lunches: s.lunches.map(l => l.id === lunchId ? { ...l, notes } : l)
     }));
@@ -228,136 +304,73 @@ export default function App() {
   const addRestaurant = (name) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    update(s => {
+    updateTeamState(s => {
       if (s.restaurants.some(r => r.name.toLowerCase() === trimmed.toLowerCase())) return s;
-      return {
-        ...s,
-        restaurants: [...s.restaurants, { name: trimmed, addedBy: me || 'someone' }]
-      };
+      return { ...s, restaurants: [...s.restaurants, { name: trimmed, addedBy: me || 'someone' }] };
     });
   };
 
   const removeRestaurant = (name) => {
-    update(s => ({
-      ...s,
-      restaurants: s.restaurants.filter(r => r.name !== name)
-    }));
-  };
-
-  const createTeam = (name, emoji) => {
-    if (!me) return;
-    const id = `team_${Date.now()}`;
-    update(s => ({
-      ...s,
-      teams: [...(s.teams || []), { id, name, emoji, members: [me], createdBy: me, joinCode: generateJoinCode() }]
-    }));
-  };
-
-  const joinTeamByCode = (code) => {
-    if (!me || !code.trim()) return false;
-    const team = (stateRef.current?.teams || []).find(
-      t => t.joinCode?.toLowerCase() === code.trim().toLowerCase()
-    );
-    if (!team) return false;
-    if (team.members.includes(me)) return 'already';
-    joinTeam(team.id);
-    return true;
-  };
-
-  const joinTeam = (teamId) => {
-    if (!me) return;
-    update(s => ({
-      ...s,
-      teams: (s.teams || []).map(t =>
-        t.id === teamId && !t.members.includes(me)
-          ? { ...t, members: [...t.members, me] }
-          : t
-      )
-    }));
-  };
-
-  const leaveTeam = (teamId) => {
-    if (!me) return;
-    update(s => ({
-      ...s,
-      teams: (s.teams || []).map(t =>
-        t.id === teamId
-          ? { ...t, members: t.members.filter(m => m !== me) }
-          : t
-      )
-    }));
+    updateTeamState(s => ({ ...s, restaurants: s.restaurants.filter(r => r.name !== name) }));
   };
 
   // ---------- render ----------
-  if (loading || !state) {
+  if (loading) {
     return <div className="app"><div className="loading">setting the table…</div></div>;
   }
 
   if (!me) {
-    return <Gate onPick={handlePickMe} teams={state.teams || []} />;
+    return <Gate onPick={handlePickMe} teams={registry?.teams || []} />;
   }
+
+  const teams = registry?.teams || [];
+  const activeTeam = teams.find(t => t.id === activeTeamId) || null;
+  const lunches     = teamState?.lunches      || [];
+  const restaurants = teamState?.restaurants  || [];
+  const ratings     = teamState?.ratings      || {};
+  const dietary     = teamState?.dietary      || {};
+  const restaurantTags = teamState?.restaurantTags || {};
 
   return (
     <div className="app">
-      <Header me={me} syncStatus={syncStatus} onSwitchUser={handleSwitchUser} />
-      <Nav view={view} setView={setView} lunches={state.lunches} />
+      <Header me={me} syncStatus={syncStatus} onSwitchUser={handleSwitchUser} activeTeam={activeTeam} />
+      <Nav view={view} setView={setView} lunches={lunches} />
       <main className="main">
         {view === 'upcoming' && (
           <UpcomingView
-            lunches={state.lunches}
-            me={me}
-            teams={state.teams || []}
-            restaurants={state.restaurants}
-            setRsvp={setRsvp}
-            setRestaurant={setRestaurant}
-            toggleProposal={toggleProposal}
-            setNotes={setNotes}
-            setVibe={setVibe}
-            dietary={state.dietary || {}}
-            restaurantTags={state.restaurantTags || {}}
+            lunches={lunches} me={me} teams={teams}
+            restaurants={restaurants}
+            setRsvp={setRsvp} setRestaurant={setRestaurant}
+            toggleProposal={toggleProposal} setNotes={setNotes} setVibe={setVibe}
+            dietary={dietary} restaurantTags={restaurantTags}
             setView={setView}
           />
         )}
         {view === 'spots' && (
           <SpotsView
-            restaurants={state.restaurants}
-            lunches={state.lunches}
-            me={me}
-            teams={state.teams || []}
-            addRestaurant={addRestaurant}
-            removeRestaurant={removeRestaurant}
-            ratings={state.ratings || {}}
-            dietary={state.dietary || {}}
-            restaurantTags={state.restaurantTags || {}}
-            tagRestaurant={tagRestaurant}
-            setView={setView}
+            restaurants={restaurants} lunches={lunches} me={me} teams={teams}
+            addRestaurant={addRestaurant} removeRestaurant={removeRestaurant}
+            ratings={ratings} dietary={dietary} restaurantTags={restaurantTags}
+            tagRestaurant={tagRestaurant} setView={setView}
           />
         )}
         {view === 'history' && (
           <HistoryView
-            lunches={state.lunches}
-            me={me}
-            teams={state.teams || []}
-            ratings={state.ratings || {}}
-            setRating={setRating}
-            setView={setView}
+            lunches={lunches} me={me} teams={teams}
+            ratings={ratings} setRating={setRating} setView={setView}
           />
         )}
         {view === 'profile' && (
           <ProfileView
-            me={me}
-            teams={state.teams || []}
-            lunches={state.lunches}
-            createTeam={createTeam}
-            joinTeamByCode={joinTeamByCode}
-            leaveTeam={leaveTeam}
-            dietary={state.dietary || {}}
-            setDietary={setDietary}
+            me={me} teams={teams} lunches={lunches}
+            activeTeamId={activeTeamId} switchToTeamId={switchToTeamId}
+            createTeam={createTeam} joinTeamByCode={joinTeamByCode} leaveTeam={leaveTeam}
+            dietary={dietary} setDietary={setDietary}
           />
         )}
       </main>
       <footer className="footer">
-        <span>state syncs every {POLL_MS / 1000}s · {state.lunches.length} lunches scheduled</span>
+        <span>syncs every {POLL_MS / 1000}s{activeTeam ? ` · ${activeTeam.emoji} ${activeTeam.name}` : ''}</span>
       </footer>
     </div>
   );

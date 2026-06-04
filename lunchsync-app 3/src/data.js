@@ -33,12 +33,16 @@ export function generateLunches() {
   return lunches;
 }
 
-export function defaultState() {
+export function defaultRegistry() {
+  return { version: 1, teams: [] };
+}
+
+export function defaultTeamState(teamId) {
   return {
     version: 1,
+    teamId,
     lunches: generateLunches(),
     restaurants: SEED_RESTAURANTS.map(name => ({ name, addedBy: 'system' })),
-    teams: [],
     ratings: {},
     dietary: {},
     restaurantTags: {}

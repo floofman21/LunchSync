@@ -1,13 +1,15 @@
 import React from 'react';
 
-export default function Header({ me, syncStatus, onSwitchUser }) {
+export default function Header({ me, syncStatus, onSwitchUser, activeTeam }) {
   return (
     <header className="header">
       <div className="brand">
         <div className="brand-mark">🥪</div>
         <div>
           <div className="brand-name">LunchSync</div>
-          <div className="brand-tag">team meals, finally sorted</div>
+          <div className="brand-tag">
+            {activeTeam ? `${activeTeam.emoji} ${activeTeam.name}` : 'team meals, finally sorted'}
+          </div>
         </div>
       </div>
       <div className="header-actions">
