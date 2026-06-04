@@ -11,14 +11,24 @@ import ProfileView from './components/ProfileView.jsx';
 
 const POLL_MS = 5000;
 
+const STATIC_NAMES = new Set(['Armand', 'Connor', 'Dan', 'Elina', 'Heather', 'Mike', 'Nate', 'Pip']);
+
 function migrateState(s) {
   let changed = false;
-  // Drop the old system-seeded Main Crew team that had static fake members
+  // Drop any system-seeded teams with the old static member list
   let teams = (s.teams || []).filter(t => {
-    if (t.id === 'team_main' && t.createdBy === 'system') { changed = true; return false; }
+    if (t.createdBy === 'system') { changed = true; return false; }
     return true;
   });
-  // Backfill join codes for any team that was created before this feature
+  // Strip static seed names out of any user-created teams that somehow got them
+  teams = teams.map(t => {
+    const cleaned = t.members.filter(m => !STATIC_NAMES.has(m) || t.createdBy === m);
+    if (cleaned.length !== t.members.length) { changed = true; return { ...t, members: cleaned }; }
+    return t;
+  });
+  // Drop teams that end up empty after stripping static names
+  teams = teams.filter(t => { if (t.members.length === 0) { changed = true; return false; } return true; });
+  // Backfill join codes for any team created before this feature
   teams = teams.map(t => {
     if (!t.joinCode) { changed = true; return { ...t, joinCode: generateJoinCode() }; }
     return t;
@@ -333,7 +343,6 @@ export default function App() {
             teams={state.teams || []}
             lunches={state.lunches}
             createTeam={createTeam}
-            joinTeam={joinTeam}
             joinTeamByCode={joinTeamByCode}
             leaveTeam={leaveTeam}
             dietary={state.dietary || {}}
