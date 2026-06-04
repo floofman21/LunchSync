@@ -75,8 +75,25 @@ function SpinWheel({ attendees }) {
 export default function UpcomingView({
   lunches, me, teams, restaurants,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
-  dietary, restaurantTags
+  dietary, restaurantTags, setView
 }) {
+  const myTeams = (teams || []).filter(t => t.members.includes(me));
+
+  if (myTeams.length === 0) {
+    return (
+      <div className="onboarding-card">
+        <div className="onboarding-emoji">🥪</div>
+        <h2 className="onboarding-title">welcome to LunchSync</h2>
+        <p className="onboarding-body">
+          You're not on a team yet. Create one for your crew or enter a code someone shared with you.
+        </p>
+        <button className="onboarding-btn" onClick={() => setView('profile')}>
+          set up my team →
+        </button>
+      </div>
+    );
+  }
+
   const upcoming = lunches.filter(l => !isPast(l.date));
   if (upcoming.length === 0) {
     return <div className="empty">no lunches on the calendar — head to <strong>Spots</strong> to add some.</div>;
@@ -87,7 +104,7 @@ export default function UpcomingView({
       <NextLunchCard
         lunch={next}
         me={me}
-        teams={teams}
+        myTeams={myTeams}
         restaurants={restaurants}
         allLunches={lunches}
         setRsvp={setRsvp}
@@ -113,20 +130,17 @@ export default function UpcomingView({
 }
 
 function NextLunchCard({
-  lunch, me, teams, restaurants, allLunches,
+  lunch, me, myTeams, restaurants, allLunches,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
   dietary, restaurantTags
 }) {
   const myRsvp = lunch.rsvps[me];
-  const allKnownMembers = [...new Set([
-    ...(teams || []).flatMap(t => t.members),
-    ...Object.keys(lunch.rsvps || {}),
-    ...(me ? [me] : [])
-  ])];
-  const yesNames = allKnownMembers.filter(n => lunch.rsvps[n] === 'yes');
-  const noCount = Object.values(lunch.rsvps).filter(s => s === 'no').length;
-  const maybeCount = Object.values(lunch.rsvps).filter(s => s === 'maybe').length;
-  const pending = allKnownMembers.filter(n => !lunch.rsvps[n]);
+  // Only show people who are on MY teams — never leak other teams' members
+  const teammates = [...new Set((myTeams || []).flatMap(t => t.members))];
+  const yesNames = teammates.filter(n => lunch.rsvps[n] === 'yes');
+  const noCount = teammates.filter(n => lunch.rsvps[n] === 'no').length;
+  const maybeCount = teammates.filter(n => lunch.rsvps[n] === 'maybe').length;
+  const pending = teammates.filter(n => !lunch.rsvps[n]);
   const d = daysUntil(lunch.date);
   const [showAllSpots, setShowAllSpots] = useState(false);
 
@@ -172,7 +186,7 @@ function NextLunchCard({
           {pending.length > 0 && <span className="stat-pending">{pending.length} haven't replied</span>}
         </div>
         <div className="rsvp-people">
-          {allKnownMembers.map(n => {
+          {teammates.map(n => {
             const s = lunch.rsvps[n];
             return (
               <div key={n} className={`person person-${s || 'pending'}`}>
@@ -183,9 +197,6 @@ function NextLunchCard({
               </div>
             );
           })}
-          {allKnownMembers.length === 0 && (
-            <div className="rsvp-empty-hint">join or create a team in Profile to see teammates here</div>
-          )}
         </div>
       </div>
 

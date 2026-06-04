@@ -315,6 +315,7 @@ export default function App() {
             setVibe={setVibe}
             dietary={state.dietary || {}}
             restaurantTags={state.restaurantTags || {}}
+            setView={setView}
           />
         )}
         {view === 'spots' && (
