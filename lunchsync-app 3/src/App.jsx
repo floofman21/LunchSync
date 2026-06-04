@@ -325,6 +325,8 @@ export default function App() {
 
   const teams = registry?.teams || [];
   const activeTeam = teams.find(t => t.id === activeTeamId) || null;
+  // Views only see the active team — never leak other teams' member lists
+  const activeTeamList = activeTeam ? [activeTeam] : [];
   const lunches     = teamState?.lunches      || [];
   const restaurants = teamState?.restaurants  || [];
   const ratings     = teamState?.ratings      || {};
@@ -338,7 +340,7 @@ export default function App() {
       <main className="main">
         {view === 'upcoming' && (
           <UpcomingView
-            lunches={lunches} me={me} teams={teams}
+            lunches={lunches} me={me} teams={activeTeamList}
             restaurants={restaurants}
             setRsvp={setRsvp} setRestaurant={setRestaurant}
             toggleProposal={toggleProposal} setNotes={setNotes} setVibe={setVibe}
@@ -348,7 +350,7 @@ export default function App() {
         )}
         {view === 'spots' && (
           <SpotsView
-            restaurants={restaurants} lunches={lunches} me={me} teams={teams}
+            restaurants={restaurants} lunches={lunches} me={me} teams={activeTeamList}
             addRestaurant={addRestaurant} removeRestaurant={removeRestaurant}
             ratings={ratings} dietary={dietary} restaurantTags={restaurantTags}
             tagRestaurant={tagRestaurant} setView={setView}
@@ -356,7 +358,7 @@ export default function App() {
         )}
         {view === 'history' && (
           <HistoryView
-            lunches={lunches} me={me} teams={teams}
+            lunches={lunches} me={me} teams={activeTeamList}
             ratings={ratings} setRating={setRating} setView={setView}
           />
         )}

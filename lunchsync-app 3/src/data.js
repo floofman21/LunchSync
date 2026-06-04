@@ -42,7 +42,7 @@ export function defaultTeamState(teamId) {
     version: 1,
     teamId,
     lunches: generateLunches(),
-    restaurants: SEED_RESTAURANTS.map(name => ({ name, addedBy: 'system' })),
+    restaurants: [],
     ratings: {},
     dietary: {},
     restaurantTags: {}
