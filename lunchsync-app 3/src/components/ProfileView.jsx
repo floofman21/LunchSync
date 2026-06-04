@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, LogOut, LogIn, Star, Salad, Hash, Copy, Check } from 'lucide-react';
+import { Users, Plus, LogOut, Salad, Hash, Copy, Check } from 'lucide-react';
 
 const DIETARY_OPTIONS = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'dairy-free', 'nut-free'];
 const TEAM_EMOJIS = ['🍕', '🌮', '🍜', '🥗', '🍣', '🌯', '🍔', '🥘'];
@@ -24,7 +24,7 @@ function CopyCode({ code }) {
 }
 
 export default function ProfileView({
-  me, teams, lunches, createTeam, joinTeam, joinTeamByCode, leaveTeam, dietary, setDietary
+  me, teams, lunches, createTeam, joinTeamByCode, leaveTeam, dietary, setDietary
 }) {
   const myDietary = (dietary || {})[me] || [];
   const [showCreate, setShowCreate] = useState(false);
@@ -34,7 +34,6 @@ export default function ProfileView({
   const [codeMsg, setCodeMsg] = useState(null);
 
   const myTeams = teams.filter(t => t.members.includes(me));
-  const otherTeams = teams.filter(t => !t.members.includes(me));
   const lunchesAttended = lunches.filter(l => l.rsvps[me] === 'yes').length;
   const initial = me ? me[0].toUpperCase() : '?';
 
@@ -158,34 +157,6 @@ export default function ProfileView({
         <div className={`join-code-msg ${codeMsg.ok ? 'join-code-ok' : 'join-code-err'}`}>
           {codeMsg.text}
         </div>
-      )}
-
-      {otherTeams.length > 0 && (
-        <>
-          <div className="profile-section-header">
-            <Star size={15} />
-            <span>discover teams</span>
-          </div>
-          <div className="team-grid">
-            {otherTeams.map(team => (
-              <div key={team.id} className="team-card team-card-other">
-                <div className="team-card-top">
-                  <span className="team-emoji">{team.emoji}</span>
-                  <span className="team-card-name">{team.name}</span>
-                  <span className="team-count">{team.members.length} members</span>
-                </div>
-                <div className="team-members-list">
-                  {team.members.map(m => (
-                    <span key={m} className="team-member-pill">{m}</span>
-                  ))}
-                </div>
-                <button className="team-action-btn btn-join" onClick={() => joinTeam(team.id)}>
-                  <LogIn size={12} /> join
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       <div className="create-team-section">
