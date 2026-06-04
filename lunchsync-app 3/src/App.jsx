@@ -301,6 +301,20 @@ export default function App() {
     }));
   };
 
+  const addLunch = (date, time) => {
+    if (!date) return;
+    const id = `lunch_${date}_${Date.now()}`;
+    updateTeamState(s => {
+      const entry = { id, date, time: time || '12:15', restaurant: null, lockedBy: null, vibes: {}, rsvps: {}, proposedRestaurants: {}, notes: '' };
+      const sorted = [...s.lunches, entry].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+      return { ...s, lunches: sorted };
+    });
+  };
+
+  const removeLunch = (lunchId) => {
+    updateTeamState(s => ({ ...s, lunches: s.lunches.filter(l => l.id !== lunchId) }));
+  };
+
   const addRestaurant = (name) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -346,6 +360,7 @@ export default function App() {
             toggleProposal={toggleProposal} setNotes={setNotes} setVibe={setVibe}
             dietary={dietary} restaurantTags={restaurantTags}
             setView={setView}
+            addLunch={addLunch} removeLunch={removeLunch}
           />
         )}
         {view === 'spots' && (

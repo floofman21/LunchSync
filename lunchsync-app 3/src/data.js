@@ -41,7 +41,7 @@ export function defaultTeamState(teamId) {
   return {
     version: 1,
     teamId,
-    lunches: generateLunches(),
+    lunches: [],
     restaurants: [],
     ratings: {},
     dietary: {},
