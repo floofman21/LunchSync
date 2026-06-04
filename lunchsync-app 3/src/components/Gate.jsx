@@ -7,7 +7,7 @@ export default function Gate({ onPick, teams }) {
 
   const handleSubmit = () => {
     const trimmed = name.trim();
-    if (!trimmed) { setError('enter your name to continue'); return; }
+    if (!trimmed) { setError('choose a username to continue'); return; }
 
     if (code.trim()) {
       const team = (teams || []).find(
@@ -30,7 +30,7 @@ export default function Gate({ onPick, teams }) {
         <div className="gate-fields">
           <input
             className="gate-input"
-            placeholder="your name"
+            placeholder="username"
             value={name}
             onChange={e => { setName(e.target.value); setError(''); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -53,7 +53,7 @@ export default function Gate({ onPick, teams }) {
           </button>
         </div>
 
-        <div className="gate-foot">no account needed · name saved in your browser</div>
+        <div className="gate-foot">no account needed · username saved in your browser</div>
       </div>
     </div>
   );
