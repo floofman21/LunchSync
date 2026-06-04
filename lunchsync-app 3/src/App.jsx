@@ -322,20 +322,25 @@ export default function App() {
           <SpotsView
             restaurants={state.restaurants}
             lunches={state.lunches}
+            me={me}
+            teams={state.teams || []}
             addRestaurant={addRestaurant}
             removeRestaurant={removeRestaurant}
             ratings={state.ratings || {}}
             dietary={state.dietary || {}}
             restaurantTags={state.restaurantTags || {}}
             tagRestaurant={tagRestaurant}
+            setView={setView}
           />
         )}
         {view === 'history' && (
           <HistoryView
             lunches={state.lunches}
             me={me}
+            teams={state.teams || []}
             ratings={state.ratings || {}}
             setRating={setRating}
+            setView={setView}
           />
         )}
         {view === 'profile' && (
