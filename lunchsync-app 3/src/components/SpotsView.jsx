@@ -96,8 +96,10 @@ function SpotRow({ r, nextLunchYes, visitCounts, ratings, lunches, dietary, rest
   );
 }
 
-export default function SpotsView({ restaurants, lunches, addRestaurant, removeRestaurant, ratings, dietary, restaurantTags, tagRestaurant }) {
+export default function SpotsView({ restaurants, lunches, me, teams, addRestaurant, removeRestaurant, ratings, dietary, restaurantTags, tagRestaurant, setView }) {
   const [draft, setDraft] = useState('');
+
+  const myTeams = (teams || []).filter(t => t.members.includes(me));
 
   const visitCounts = useMemo(() => {
     const counts = {};
@@ -107,8 +109,26 @@ export default function SpotsView({ restaurants, lunches, addRestaurant, removeR
     return counts;
   }, [lunches]);
 
+  if (myTeams.length === 0) {
+    return (
+      <div className="onboarding-card">
+        <div className="onboarding-emoji">📍</div>
+        <h2 className="onboarding-title">no spots yet</h2>
+        <p className="onboarding-body">
+          Join or create a team to build your crew's restaurant rotation.
+        </p>
+        <button className="onboarding-btn" onClick={() => setView('profile')}>
+          set up my team →
+        </button>
+      </div>
+    );
+  }
+
+  const teammates = new Set(myTeams.flatMap(t => t.members));
   const nextLunch = lunches.find(l => !isPast(l.date));
-  const nextLunchYes = nextLunch ? Object.entries(nextLunch.rsvps).filter(([, v]) => v === 'yes').map(([k]) => k) : [];
+  const nextLunchYes = nextLunch
+    ? Object.entries(nextLunch.rsvps).filter(([n, v]) => v === 'yes' && teammates.has(n)).map(([k]) => k)
+    : [];
 
   const onAdd = () => {
     if (!draft.trim()) return;
