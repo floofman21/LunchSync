@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Check, X, HelpCircle, MapPin } from 'lucide-react';
+import { Check, X, HelpCircle, MapPin, Plus, Trash2 } from 'lucide-react';
 import { fmtDate, fmtDateLong, isPast, isToday, daysUntil } from '../data.js';
 
 const VIBES = ['quick bite', 'sit-down', 'adventurous', 'comfort food', 'patio'];
@@ -72,10 +72,76 @@ function SpinWheel({ attendees }) {
   );
 }
 
+function AddLunchForm({ onAdd, onCancel }) {
+  const defaultDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  })();
+
+  const [date, setDate] = useState(defaultDate);
+  const [time, setTime] = useState('12:15');
+  const today = new Date().toISOString().split('T')[0];
+
+  return (
+    <div className="add-lunch-form">
+      <div className="add-lunch-form-label">schedule a lunch</div>
+      <div className="add-lunch-fields">
+        <input
+          type="date"
+          className="add-lunch-input"
+          value={date}
+          min={today}
+          onChange={e => setDate(e.target.value)}
+        />
+        <input
+          type="time"
+          className="add-lunch-input"
+          value={time}
+          onChange={e => setTime(e.target.value)}
+        />
+        <button
+          className="add-lunch-btn"
+          onClick={() => date && onAdd(date, time)}
+          disabled={!date}
+        >
+          add to calendar
+        </button>
+        <button className="add-lunch-cancel" onClick={onCancel}>cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function AddLunchTrigger({ onAdd }) {
+  const [open, setOpen] = useState(false);
+
+  if (open) {
+    return (
+      <div className="add-lunch-wrap">
+        <AddLunchForm
+          onAdd={(date, time) => { onAdd(date, time); setOpen(false); }}
+          onCancel={() => setOpen(false)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="add-lunch-wrap">
+      <button className="add-lunch-trigger" onClick={() => setOpen(true)}>
+        <Plus size={15} />
+        schedule a lunch
+      </button>
+    </div>
+  );
+}
+
 export default function UpcomingView({
   lunches, me, teams, restaurants,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
-  dietary, restaurantTags, setView
+  dietary, restaurantTags, setView,
+  addLunch, removeLunch
 }) {
   const myTeams = (teams || []).filter(t => t.members.includes(me));
 
@@ -95,9 +161,20 @@ export default function UpcomingView({
   }
 
   const upcoming = lunches.filter(l => !isPast(l.date));
+
   if (upcoming.length === 0) {
-    return <div className="empty">no lunches on the calendar — head to <strong>Spots</strong> to add some.</div>;
+    return (
+      <div>
+        <div className="empty-lunches">
+          <div className="empty-lunches-emoji">📅</div>
+          <div className="empty-lunches-text">no lunches scheduled yet</div>
+          <div className="empty-lunches-sub">pick a date and time to get started</div>
+        </div>
+        <AddLunchTrigger onAdd={addLunch} />
+      </div>
+    );
   }
+
   const [next, ...rest] = upcoming;
   return (
     <div>
@@ -114,17 +191,19 @@ export default function UpcomingView({
         setVibe={setVibe}
         dietary={dietary}
         restaurantTags={restaurantTags}
+        onRemove={() => removeLunch(next.id)}
       />
       {rest.length > 0 && (
         <div className="future">
           <div className="section-label">what's coming up</div>
           <div className="future-grid">
             {rest.slice(0, 8).map(l => (
-              <FutureCard key={l.id} lunch={l} me={me} setRsvp={setRsvp} />
+              <FutureCard key={l.id} lunch={l} me={me} setRsvp={setRsvp} onRemove={() => removeLunch(l.id)} />
             ))}
           </div>
         </div>
       )}
+      <AddLunchTrigger onAdd={addLunch} />
     </div>
   );
 }
@@ -132,10 +211,9 @@ export default function UpcomingView({
 function NextLunchCard({
   lunch, me, myTeams, restaurants, allLunches,
   setRsvp, setRestaurant, toggleProposal, setNotes, setVibe,
-  dietary, restaurantTags
+  dietary, restaurantTags, onRemove
 }) {
   const myRsvp = lunch.rsvps[me];
-  // Only show people who are on MY teams — never leak other teams' members
   const teammates = [...new Set((myTeams || []).flatMap(t => t.members))];
   const yesNames = teammates.filter(n => lunch.rsvps[n] === 'yes');
   const noCount = teammates.filter(n => lunch.rsvps[n] === 'no').length;
@@ -148,15 +226,12 @@ function NextLunchCard({
     .sort((a, b) => b[1].length - a[1].length);
   const visibleRestaurants = showAllSpots ? restaurants : restaurants.slice(0, 6);
 
-  // Vibe tally
   const myVibe = (lunch.vibes || {})[me];
   const vibeTally = {};
   Object.values(lunch.vibes || {}).forEach(v => { vibeTally[v] = (vibeTally[v] || 0) + 1; });
 
-  // Turn rotation
   const nextPicker = getNextPicker(allLunches, yesNames);
 
-  // Dietary compat
   const getConflicts = (restaurantName) => {
     if (!dietary || !Object.keys(dietary).length) return [];
     const rTags = (restaurantTags || {})[restaurantName] || [];
@@ -165,11 +240,19 @@ function NextLunchCard({
 
   return (
     <article className="card-hero">
-      <div className="hero-tag">
-        {isToday(lunch.date) ? 'today' : d === 1 ? 'tomorrow' : d < 0 ? 'happening now' : `in ${d} days`}
+      <div className="hero-header">
+        <div>
+          <div className="hero-tag">
+            {isToday(lunch.date) ? 'today' : d === 1 ? 'tomorrow' : d < 0 ? 'happening now' : `in ${d} days`}
+          </div>
+          <h2 className="hero-date">{fmtDateLong(lunch.date)}</h2>
+          <div className="hero-time">@ {lunch.time}</div>
+        </div>
+        <button className="hero-remove-btn" onClick={onRemove} title="remove this lunch">
+          <Trash2 size={14} />
+          remove
+        </button>
       </div>
-      <h2 className="hero-date">{fmtDateLong(lunch.date)}</h2>
-      <div className="hero-time">@ {lunch.time}</div>
 
       {/* RSVP */}
       <div className="block">
@@ -325,12 +408,17 @@ function RsvpBtn({ status, active, onClick, icon: Icon, label }) {
   );
 }
 
-function FutureCard({ lunch, me, setRsvp }) {
+function FutureCard({ lunch, me, setRsvp, onRemove }) {
   const myRsvp = lunch.rsvps[me];
   const yesCount = Object.values(lunch.rsvps).filter(s => s === 'yes').length;
   return (
     <div className="future-card">
-      <div className="future-date">{fmtDate(lunch.date)}</div>
+      <div className="future-card-top">
+        <div className="future-date">{fmtDate(lunch.date)}</div>
+        <button className="future-card-del" onClick={onRemove} title="remove">
+          <Trash2 size={12} />
+        </button>
+      </div>
       <div className="future-where">{lunch.restaurant || <em>tbd</em>}</div>
       <div className="future-yes">{yesCount > 0 ? `${yesCount} ${yesCount === 1 ? 'person' : 'people'} in` : 'crickets so far'}</div>
       <div className="future-rsvp">

@@ -711,6 +711,174 @@ body {
 
 .future-rsvp { display: flex; gap: 0.3rem; }
 
+.future-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.45rem;
+}
+
+.future-card-top .future-date { margin-bottom: 0; }
+
+.future-card-del {
+  background: none;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-sm);
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.future-card-del:hover { color: var(--cherry); background: var(--cherry-light); }
+
+/* ---------- hero header with remove ---------- */
+.hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.hero-header .hero-tag { margin-bottom: 0.85rem; }
+.hero-header .hero-date { margin: 0; }
+.hero-header .hero-time { margin-top: 0.3rem; margin-bottom: 0; }
+
+.hero-remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s var(--ease);
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+.hero-remove-btn:hover { color: var(--cherry); border-color: var(--cherry); background: var(--cherry-light); }
+
+/* ---------- empty lunches state ---------- */
+.empty-lunches {
+  text-align: center;
+  padding: 3.5rem 2rem 1.5rem;
+}
+.empty-lunches-emoji { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-lunches-text {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+.empty-lunches-sub { font-size: 0.875rem; color: var(--ink-2); }
+
+/* ---------- add lunch form ---------- */
+.add-lunch-wrap { padding: 1.5rem 0 0.5rem; }
+
+.add-lunch-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: 1.5px dashed var(--border-med);
+  border-radius: var(--r-lg);
+  padding: 0.85rem 1.25rem;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s;
+}
+.add-lunch-trigger:hover {
+  border-color: var(--cherry);
+  color: var(--cherry);
+  background: var(--cherry-light);
+}
+
+.add-lunch-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.add-lunch-form-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  margin-bottom: 0.75rem;
+}
+
+.add-lunch-fields {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.add-lunch-input {
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  outline: none;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.add-lunch-input:focus {
+  border-color: var(--cherry);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cherry) 12%, transparent);
+}
+
+.add-lunch-btn {
+  padding: 0.6rem 1.2rem;
+  background: var(--cherry);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
+  white-space: nowrap;
+}
+.add-lunch-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.add-lunch-btn:active:not(:disabled) { transform: translateY(0); }
+.add-lunch-btn:disabled { opacity: 0.4; cursor: default; }
+
+.add-lunch-cancel {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 0.6rem 0.35rem;
+  font-family: 'Inter', sans-serif;
+  transition: color 0.15s;
+}
+.add-lunch-cancel:hover { color: var(--ink-2); }
+
 .mini-rsvp {
   display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px;
