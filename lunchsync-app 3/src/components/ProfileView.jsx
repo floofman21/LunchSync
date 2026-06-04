@@ -24,7 +24,8 @@ function CopyCode({ code }) {
 }
 
 export default function ProfileView({
-  me, teams, lunches, createTeam, joinTeamByCode, leaveTeam, dietary, setDietary
+  me, teams, lunches, activeTeamId, switchToTeamId,
+  createTeam, joinTeamByCode, leaveTeam, dietary, setDietary
 }) {
   const myDietary = (dietary || {})[me] || [];
   const [showCreate, setShowCreate] = useState(false);
@@ -116,24 +117,37 @@ export default function ProfileView({
       )}
 
       <div className="team-grid">
-        {myTeams.map(team => (
-          <div key={team.id} className="team-card team-card-mine">
-            <div className="team-card-top">
-              <span className="team-emoji">{team.emoji}</span>
-              <span className="team-card-name">{team.name}</span>
-              <span className="team-count">{team.members.length} members</span>
+        {myTeams.map(team => {
+          const isActive = team.id === activeTeamId;
+          return (
+            <div key={team.id} className={`team-card team-card-mine ${isActive ? 'team-card-active' : ''}`}>
+              <div className="team-card-top">
+                <span className="team-emoji">{team.emoji}</span>
+                <span className="team-card-name">{team.name}</span>
+                {isActive
+                  ? <span className="team-active-badge">active</span>
+                  : <span className="team-count">{team.members.length} members</span>
+                }
+              </div>
+              <div className="team-members-list">
+                {team.members.map(m => (
+                  <span key={m} className={`team-member-pill ${m === me ? 'team-member-me' : ''}`}>{m}</span>
+                ))}
+              </div>
+              {team.joinCode && <CopyCode code={team.joinCode} />}
+              <div className="team-card-actions">
+                {!isActive && (
+                  <button className="team-action-btn btn-switch" onClick={() => switchToTeamId(team.id)}>
+                    switch to this team
+                  </button>
+                )}
+                <button className="team-action-btn btn-leave" onClick={() => leaveTeam(team.id)}>
+                  <LogOut size={12} /> leave
+                </button>
+              </div>
             </div>
-            <div className="team-members-list">
-              {team.members.map(m => (
-                <span key={m} className={`team-member-pill ${m === me ? 'team-member-me' : ''}`}>{m}</span>
-              ))}
-            </div>
-            {team.joinCode && <CopyCode code={team.joinCode} />}
-            <button className="team-action-btn btn-leave" onClick={() => leaveTeam(team.id)}>
-              <LogOut size={12} /> leave
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="profile-section-header">

@@ -1169,6 +1169,30 @@ body {
 .btn-join { background: var(--sage-light); color: var(--sage-dark); border-color: rgba(22,163,74,0.25); }
 .btn-join:hover { background: var(--sage); color: #fff; border-color: var(--sage); }
 
+.btn-switch {
+  background: var(--cherry-light);
+  color: var(--cherry);
+  border-color: rgba(220,38,38,0.2);
+  flex: 1;
+}
+.btn-switch:hover { background: var(--cherry); color: #fff; border-color: var(--cherry); }
+
+.team-card-active { border-color: var(--cherry); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cherry) 15%, transparent); }
+
+.team-active-badge {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cherry);
+  background: var(--cherry-light);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r-full);
+}
+
+.team-card-actions { display: flex; gap: 0.4rem; margin-top: 0.25rem; }
+
 .team-code-row {
   display: flex;
   align-items: center;
