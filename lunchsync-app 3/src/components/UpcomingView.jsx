@@ -179,6 +179,19 @@ export default function UpcomingView({
   const [next, ...rest] = upcoming;
   return (
     <div>
+      <div className="upcoming-top-action">
+        {addOpen ? (
+          <AddLunchForm
+            onAdd={(date, time) => { addLunch(date, time); setAddOpen(false); }}
+            onCancel={() => setAddOpen(false)}
+          />
+        ) : (
+          <button className="add-lunch-top-btn" onClick={() => setAddOpen(true)}>
+            <Plus size={14} />
+            schedule a lunch
+          </button>
+        )}
+      </div>
       <NextLunchCard
         lunch={next}
         me={me}
@@ -195,22 +208,7 @@ export default function UpcomingView({
         onRemove={() => removeLunch(next.id)}
       />
       <div className="future">
-        <div className="section-row">
-          <div className="section-label">what's coming up</div>
-          <button
-            className={`add-lunch-mini ${addOpen ? 'active' : ''}`}
-            onClick={() => setAddOpen(o => !o)}
-          >
-            <Plus size={13} />
-            {addOpen ? 'cancel' : 'schedule'}
-          </button>
-        </div>
-        {addOpen && (
-          <AddLunchForm
-            onAdd={(date, time) => { addLunch(date, time); setAddOpen(false); }}
-            onCancel={() => setAddOpen(false)}
-          />
-        )}
+        <div className="section-label">what's coming up</div>
         {rest.length > 0 && (
           <div className="future-grid">
             {rest.slice(0, 8).map(l => (
