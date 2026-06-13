@@ -143,6 +143,7 @@ export default function UpcomingView({
   dietary, restaurantTags, setView,
   addLunch, removeLunch
 }) {
+  const [addOpen, setAddOpen] = useState(false);
   const myTeams = (teams || []).filter(t => t.members.includes(me));
 
   if (myTeams.length === 0) {
@@ -193,17 +194,31 @@ export default function UpcomingView({
         restaurantTags={restaurantTags}
         onRemove={() => removeLunch(next.id)}
       />
-      {rest.length > 0 && (
-        <div className="future">
+      <div className="future">
+        <div className="section-row">
           <div className="section-label">what's coming up</div>
+          <button
+            className={`add-lunch-mini ${addOpen ? 'active' : ''}`}
+            onClick={() => setAddOpen(o => !o)}
+          >
+            <Plus size={13} />
+            {addOpen ? 'cancel' : 'schedule'}
+          </button>
+        </div>
+        {addOpen && (
+          <AddLunchForm
+            onAdd={(date, time) => { addLunch(date, time); setAddOpen(false); }}
+            onCancel={() => setAddOpen(false)}
+          />
+        )}
+        {rest.length > 0 && (
           <div className="future-grid">
             {rest.slice(0, 8).map(l => (
               <FutureCard key={l.id} lunch={l} me={me} setRsvp={setRsvp} onRemove={() => removeLunch(l.id)} />
             ))}
           </div>
-        </div>
-      )}
-      <AddLunchTrigger onAdd={addLunch} />
+        )}
+      </div>
     </div>
   );
 }
