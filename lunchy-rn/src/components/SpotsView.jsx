@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, FlatList, StyleSheet, Alert,
 } from 'react-native';
-import { Plus, Trash2, Tag } from 'lucide-react-native';
+import { Plus, Trash2, Tag, ChevronRight } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { isPast } from '../data';
 import { useAppContext } from '../AppContext';
-import { COLORS, RADIUS, SPACING, SHADOW } from '../theme';
+import { theme } from '../theme';
+import { Card, Button, Pill, SectionHeader } from '../ui';
 
 const DIETARY_OPTIONS = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'dairy-free', 'nut-free'];
 const RATING_EMOJI    = { fire: '🔥', meh: '😐', never: '❌' };
@@ -22,15 +24,15 @@ function getRatingSummary(restaurantName, lunches, ratings) {
   return Object.entries(counts)
     .filter(([, n]) => n > 0)
     .map(([k, n]) => `${RATING_EMOJI[k]}×${n}`)
-    .join(' ');
+    .join('  ');
 }
 
 function getCompatLabel(restaurantName, nextLunchYes, dietary, restaurantTags) {
   if (!nextLunchYes.length || !Object.keys(dietary).length) return null;
   const rTags     = (restaurantTags || {})[restaurantName] || [];
   const conflicts = nextLunchYes.filter(n => (dietary[n] || []).some(r => !rTags.includes(r)));
-  if (conflicts.length === 0) return { ok: true, label: '✓ all good' };
-  return { ok: false, label: `⚠️ ${conflicts.join(', ')}` };
+  if (conflicts.length === 0) return { ok: true,  label: '✓ all good' };
+  return           { ok: false, label: `⚠️ ${conflicts.join(', ')}` };
 }
 
 function SpotRow({ r, nextLunchYes, visitCounts, ratings, lunches, dietary, restaurantTags, tagRestaurant, onRemove }) {
@@ -53,13 +55,19 @@ function SpotRow({ r, nextLunchYes, visitCounts, ratings, lunches, dietary, rest
   };
 
   return (
-    <View style={sr.wrapper}>
+    <Card style={sr.card}>
       <View style={sr.row}>
+        {/* emoji tile */}
+        <View style={sr.tile}>
+          <Text style={sr.tileText}>{r.name[0]?.toUpperCase() ?? '?'}</Text>
+        </View>
+
+        {/* main info */}
         <View style={sr.main}>
           <Text style={sr.name}>{r.name}</Text>
-          <Text style={sr.meta} numberOfLines={1}>
+          <Text style={sr.meta}>
             {visits ? `${visits} visit${visits !== 1 ? 's' : ''}` : 'untouched'}
-            {r.addedBy !== 'system' ? ` · added by ${r.addedBy}` : ''}
+            {r.addedBy !== 'system' ? ` · by ${r.addedBy}` : ''}
             {ratingSummary ? `  ${ratingSummary}` : ''}
           </Text>
           {(tags.length > 0 || compat) && (
@@ -71,57 +79,55 @@ function SpotRow({ r, nextLunchYes, visitCounts, ratings, lunches, dietary, rest
             </View>
           )}
         </View>
+
+        {/* actions */}
         <View style={sr.actions}>
-          <Pressable style={[sr.actionBtn, editingTags && sr.actionBtnActive]} onPress={() => setEditingTags(e => !e)}>
-            <Tag size={14} color={editingTags ? COLORS.cherry : COLORS.ink3} />
+          <Pressable
+            hitSlop={6}
+            style={[sr.actionBtn, editingTags && sr.actionBtnActive]}
+            onPress={() => { Haptics.selectionAsync(); setEditingTags(e => !e); }}
+          >
+            <Tag size={14} color={editingTags ? theme.colors.honey : theme.colors.muted} />
           </Pressable>
-          <Pressable style={sr.actionBtn} onPress={confirmRemove}>
-            <Trash2 size={14} color={COLORS.noFg} />
+          <Pressable hitSlop={6} style={sr.actionBtn} onPress={confirmRemove}>
+            <Trash2 size={14} color={theme.colors.cocoa} />
           </Pressable>
         </View>
       </View>
 
       {editingTags && (
         <View style={sr.tagEditor}>
-          <Text style={sr.tagHint}>tag what this place accommodates:</Text>
+          <Text style={sr.tagHint}>what does this place accommodate?</Text>
           <View style={sr.tagOptions}>
             {DIETARY_OPTIONS.map(tag => (
-              <Pressable
-                key={tag}
-                style={[sr.tagToggle, tags.includes(tag) && sr.tagToggleActive]}
-                onPress={() => toggleTag(tag)}
-              >
-                <Text style={[sr.tagToggleText, tags.includes(tag) && sr.tagToggleTextActive]}>{tag}</Text>
-              </Pressable>
+              <Pill key={tag} label={tag} active={tags.includes(tag)} tone="honey" onPress={() => toggleTag(tag)} />
             ))}
           </View>
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
 const sr = StyleSheet.create({
-  wrapper:   { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: 8, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
-  row:       { flexDirection: 'row', alignItems: 'flex-start', padding: 12, gap: 8 },
-  main:      { flex: 1 },
-  name:      { fontSize: 15, fontWeight: '700', color: COLORS.ink, marginBottom: 3 },
-  meta:      { fontSize: 12, color: COLORS.ink3, marginBottom: 4 },
-  tagRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  tagPill:   { fontSize: 11, fontWeight: '600', color: COLORS.ink3, backgroundColor: COLORS.surface2, borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: COLORS.border },
-  compatBadge: { fontSize: 11, fontWeight: '600', borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden' },
-  compatOk:    { color: COLORS.yesFg,  backgroundColor: COLORS.yesBg  },
-  compatWarn:  { color: COLORS.maybeFg, backgroundColor: COLORS.maybeBg },
-  actions:     { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  actionBtn:      { padding: 6, backgroundColor: COLORS.surface2, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border },
-  actionBtnActive: { backgroundColor: COLORS.cherryLight, borderColor: COLORS.cherry },
-  tagEditor:  { borderTopWidth: 1, borderTopColor: COLORS.border, padding: 12 },
-  tagHint:    { fontSize: 12, color: COLORS.ink3, marginBottom: 8 },
-  tagOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tagToggle:      { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: COLORS.surface2, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
-  tagToggleActive: { backgroundColor: COLORS.cherryLight, borderColor: COLORS.cherry },
-  tagToggleText:      { fontSize: 12, color: COLORS.ink2 },
-  tagToggleTextActive: { color: COLORS.cherry, fontWeight: '600' },
+  card:    { marginBottom: theme.space.sm, padding: theme.space.md },
+  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.sm },
+  tile:    { width: 40, height: 40, borderRadius: theme.radius.tile, backgroundColor: theme.colors.cream, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.line },
+  tileText:{ fontSize: 18, fontWeight: '600', color: theme.colors.espresso },
+  main:    { flex: 1, gap: 3 },
+  name:    { ...theme.type.h2, fontSize: 15 },
+  meta:    { ...theme.type.meta },
+  tagRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs, marginTop: 2 },
+  tagPill: { fontSize: 11, fontWeight: '600', color: theme.colors.muted, backgroundColor: theme.colors.cream, borderRadius: theme.radius.chip, paddingHorizontal: theme.space.sm, paddingVertical: 3, borderWidth: 1, borderColor: theme.colors.line },
+  compatBadge: { fontSize: 11, fontWeight: '600', borderRadius: theme.radius.chip, paddingHorizontal: theme.space.sm, paddingVertical: 3, overflow: 'hidden' },
+  compatOk:   { color: theme.colors.sage,  backgroundColor: 'rgba(125,138,95,0.12)'  },
+  compatWarn: { color: theme.colors.cocoa, backgroundColor: 'rgba(138,90,60,0.12)' },
+  actions:    { flexDirection: 'row', gap: theme.space.xs, alignItems: 'center' },
+  actionBtn:      { padding: 6, backgroundColor: theme.colors.cream, borderRadius: theme.radius.chip, borderWidth: 1, borderColor: theme.colors.line },
+  actionBtnActive:{ backgroundColor: 'rgba(201,163,106,0.15)', borderColor: theme.colors.honey },
+  tagEditor:  { borderTopWidth: 1, borderTopColor: theme.colors.line, paddingTop: theme.space.md, marginTop: theme.space.sm, gap: theme.space.sm },
+  tagHint:    { ...theme.type.meta },
+  tagOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm },
 });
 
 export default function SpotsView() {
@@ -145,14 +151,11 @@ export default function SpotsView() {
   if (myTeams.length === 0) {
     return (
       <View style={sv.center}>
-        <View style={sv.onboarding}>
-          <Text style={sv.onboardingEmoji}>📍</Text>
+        <Card style={sv.onboarding}>
           <Text style={sv.onboardingTitle}>no spots yet</Text>
           <Text style={sv.onboardingBody}>Join or create a team to build your crew's restaurant rotation.</Text>
-          <Pressable style={sv.onboardingBtn} onPress={() => navigation.navigate('Profile')}>
-            <Text style={sv.onboardingBtnText}>set up my team →</Text>
-          </Pressable>
-        </View>
+          <Button label="set up my team →" onPress={() => navigation.navigate('You')} variant="primary" style={sv.onboardingBtn} />
+        </Card>
       </View>
     );
   }
@@ -165,33 +168,31 @@ export default function SpotsView() {
 
   const onAdd = () => {
     if (!draft.trim()) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addRestaurant(draft);
     setDraft('');
   };
 
   return (
     <FlatList
+      style={{ backgroundColor: theme.colors.bg }}
       contentContainerStyle={sv.list}
       data={restaurants}
       keyExtractor={r => r.name}
       ListHeaderComponent={
         <>
-          <Text style={sv.sectionLabel}>the rotation</Text>
-          <Text style={sv.hint}>{restaurants.length} places · tag dietary accommodations · ratings from past visits</Text>
+          <SectionHeader label={`${restaurants.length} spots`} style={sv.sectionHeader} />
           <View style={sv.addRow}>
             <TextInput
               style={sv.addInput}
-              placeholder="found a new spot? add it here…"
-              placeholderTextColor={COLORS.ink4}
+              placeholder="add a new spot…"
+              placeholderTextColor={theme.colors.muted}
               value={draft}
               onChangeText={setDraft}
               onSubmitEditing={onAdd}
               returnKeyType="done"
             />
-            <Pressable style={sv.addBtn} onPress={onAdd}>
-              <Plus size={14} color="#fff" />
-              <Text style={sv.addBtnText}>add it</Text>
-            </Pressable>
+            <Button label="add" onPress={onAdd} variant="primary" style={sv.addBtn} />
           </View>
         </>
       }
@@ -213,18 +214,14 @@ export default function SpotsView() {
 }
 
 const sv = StyleSheet.create({
-  list:           { padding: SPACING.md, paddingBottom: SPACING.xl },
-  center:         { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
-  onboarding:     { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, alignItems: 'center', ...SHADOW.sm },
-  onboardingEmoji:{ fontSize: 40, marginBottom: 8 },
-  onboardingTitle:{ fontSize: 18, fontWeight: '800', color: COLORS.ink, marginBottom: 8, textAlign: 'center' },
-  onboardingBody: { fontSize: 14, color: COLORS.ink3, textAlign: 'center', lineHeight: 20, marginBottom: SPACING.lg },
-  onboardingBtn:  { backgroundColor: COLORS.cherry, borderRadius: RADIUS.md, paddingHorizontal: 20, paddingVertical: 12 },
-  onboardingBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  sectionLabel:   { fontSize: 11, fontWeight: '700', color: COLORS.ink3, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  hint:           { fontSize: 13, color: COLORS.ink3, marginBottom: SPACING.md },
-  addRow:         { flexDirection: 'row', gap: 8, marginBottom: SPACING.md },
-  addInput:       { flex: 1, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: COLORS.ink, backgroundColor: COLORS.surface2 },
-  addBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.cherry, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 10 },
-  addBtnText:     { color: '#fff', fontWeight: '700', fontSize: 14 },
+  list:    { padding: theme.space.screen, paddingBottom: theme.space.xxl },
+  center:  { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.space.screen },
+  onboarding:      { alignItems: 'center', gap: theme.space.md },
+  onboardingTitle: { ...theme.type.h2, textAlign: 'center' },
+  onboardingBody:  { ...theme.type.body, textAlign: 'center', color: theme.colors.muted },
+  onboardingBtn:   { marginTop: theme.space.sm },
+  sectionHeader:   { marginBottom: theme.space.sm },
+  addRow:   { flexDirection: 'row', gap: theme.space.sm, marginBottom: theme.space.md, alignItems: 'center' },
+  addInput: { flex: 1, borderWidth: 1, borderColor: theme.colors.line, borderRadius: theme.radius.chip, paddingHorizontal: theme.space.md, paddingVertical: theme.space.sm + 2, fontSize: 14, color: theme.colors.ink, backgroundColor: theme.colors.surface },
+  addBtn:   { paddingVertical: theme.space.sm + 2 },
 });

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View, Text, TextInput, StyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView, Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { BRAND } from '../branding';
-import { COLORS, RADIUS, SPACING, SHADOW } from '../theme';
+import { theme } from '../theme';
+import OrbitMark from './OrbitMark';
+import { Button } from '../ui';
 
 export default function Gate({ onPick, teams }) {
   const [name,  setName]  = useState('');
@@ -13,13 +16,20 @@ export default function Gate({ onPick, teams }) {
 
   const handleSubmit = () => {
     const trimmed = name.trim();
-    if (!trimmed) { setError('choose a username to continue'); return; }
-
+    if (!trimmed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError('choose a username to continue');
+      return;
+    }
     if (code.trim()) {
       const team = (teams || []).find(
         t => t.joinCode?.toLowerCase() === code.trim().toLowerCase()
       );
-      if (!team) { setError('team code not found — double-check it'); return; }
+      if (!team) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError('team code not found — double-check it');
+        return;
+      }
       onPick(trimmed, team.id);
     } else {
       onPick(trimmed, null);
@@ -32,15 +42,19 @@ export default function Gate({ onPick, teams }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <View style={s.hero}>
+          <OrbitMark size={52} ring={theme.colors.onDark} dot={theme.colors.honey} />
+          <Text style={s.brand}>{BRAND.name}</Text>
+          <Text style={s.tagline}>{BRAND.tagline}</Text>
+        </View>
+
         <View style={s.card}>
-          <Text style={s.eyebrow}>welcome to</Text>
-          <Text style={s.title}>{BRAND.name}</Text>
-          <Text style={s.sub}>{BRAND.subtitle}</Text>
+          <Text style={s.eyebrow}>get started</Text>
 
           <TextInput
             style={s.input}
-            placeholder="username"
-            placeholderTextColor={COLORS.ink4}
+            placeholder="choose a username"
+            placeholderTextColor={theme.colors.muted}
             value={name}
             onChangeText={v => { setName(v); setError(''); }}
             onSubmitEditing={handleSubmit}
@@ -49,9 +63,9 @@ export default function Gate({ onPick, teams }) {
             returnKeyType="next"
           />
           <TextInput
-            style={[s.input, s.inputSecondary]}
+            style={s.input}
             placeholder="team code (optional)"
-            placeholderTextColor={COLORS.ink4}
+            placeholderTextColor={theme.colors.muted}
             value={code}
             onChangeText={v => { setCode(v.toUpperCase()); setError(''); }}
             onSubmitEditing={handleSubmit}
@@ -62,13 +76,13 @@ export default function Gate({ onPick, teams }) {
 
           {error ? <Text style={s.error}>{error}</Text> : null}
 
-          <Pressable
-            style={[s.submitBtn, !name.trim() && s.submitBtnDisabled]}
+          <Button
+            label="let's eat →"
             onPress={handleSubmit}
+            variant="primary"
             disabled={!name.trim()}
-          >
-            <Text style={s.submitBtnText}>let's eat →</Text>
-          </Pressable>
+            style={s.submitBtn}
+          />
 
           <Text style={s.foot}>{BRAND.footNote}</Text>
         </View>
@@ -78,48 +92,66 @@ export default function Gate({ onPick, teams }) {
 }
 
 const s = StyleSheet.create({
-  outer:  { flex: 1, backgroundColor: COLORS.surface2 },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.lg },
+  outer:  { flex: 1, backgroundColor: theme.colors.espresso },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: theme.space.screen },
+
+  hero: {
+    alignItems: 'center',
+    paddingVertical: theme.space.xxl,
+    gap: theme.space.sm,
+  },
+  brand: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: theme.colors.onDark,
+    letterSpacing: -0.5,
+    marginTop: theme.space.sm,
+  },
+  tagline: {
+    ...theme.type.meta,
+    color: theme.colors.onDarkMuted,
+  },
 
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    ...SHADOW.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.hero,
+    padding: theme.space.xl,
+    ...theme.shadow.md,
   },
 
-  eyebrow: { fontSize: 12, fontWeight: '600', color: COLORS.ink3, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  title:   { fontSize: 32, fontWeight: '800', color: COLORS.cherry, marginBottom: 4 },
-  sub:     { fontSize: 14, color: COLORS.ink3, marginBottom: SPACING.xl },
+  eyebrow: {
+    ...theme.type.eyebrow,
+    marginBottom: theme.space.md,
+    textAlign: 'center',
+  },
 
   input: {
-    width: '100%',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    borderRadius: theme.radius.chip,
+    paddingHorizontal: theme.space.md,
+    paddingVertical: theme.space.md,
     fontSize: 16,
-    color: COLORS.ink,
-    backgroundColor: COLORS.surface2,
-    marginBottom: SPACING.sm,
+    color: theme.colors.ink,
+    backgroundColor: theme.colors.cream,
+    marginBottom: theme.space.sm,
   },
-  inputSecondary: { borderStyle: 'dashed' },
 
-  error: { fontSize: 13, color: COLORS.noFg, marginBottom: SPACING.sm, alignSelf: 'flex-start' },
+  error: {
+    fontSize: 13,
+    color: theme.colors.cocoa,
+    marginBottom: theme.space.sm,
+  },
 
   submitBtn: {
     width: '100%',
-    backgroundColor: COLORS.cherry,
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-    ...SHADOW.sm,
+    paddingVertical: theme.space.md,
+    marginTop: theme.space.xs,
   },
-  submitBtnDisabled: { opacity: 0.45 },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  foot: { fontSize: 12, color: COLORS.ink4, marginTop: SPACING.lg, textAlign: 'center' },
+  foot: {
+    ...theme.type.meta,
+    marginTop: theme.space.lg,
+    textAlign: 'center',
+  },
 });

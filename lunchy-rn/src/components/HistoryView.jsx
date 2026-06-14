@@ -1,32 +1,31 @@
 import React from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
-import { fmtDate, isPast } from '../data';
+import { fmtDate, fmtDateLong, isPast } from '../data';
 import { useAppContext } from '../AppContext';
-import { COLORS, RADIUS, SPACING, SHADOW } from '../theme';
+import { theme } from '../theme';
+import { Card, Button, SectionHeader } from '../ui';
 
 const RATINGS = [
   { key: 'fire',  emoji: '🔥', label: 'loved it'    },
   { key: 'meh',   emoji: '😐', label: 'it was ok'   },
-  { key: 'never', emoji: '❌', label: 'never again' },
+  { key: 'never', emoji: '❌', label: 'never again'  },
 ];
 
 export default function HistoryView() {
   const navigation = useNavigation();
   const { me, lunches, ratings, setRating, activeTeamList: teams } = useAppContext();
-  const myTeams  = (teams || []).filter(t => t.members.includes(me));
+  const myTeams = (teams || []).filter(t => t.members.includes(me));
 
   if (myTeams.length === 0) {
     return (
       <View style={hv.center}>
-        <View style={hv.onboarding}>
-          <Text style={hv.onboardingEmoji}>📖</Text>
+        <Card style={hv.onboarding}>
           <Text style={hv.onboardingTitle}>no history yet</Text>
-          <Text style={hv.onboardingBody}>Join or create a team to start tracking your group's lunch history.</Text>
-          <Pressable style={hv.onboardingBtn} onPress={() => navigation.navigate('Profile')}>
-            <Text style={hv.onboardingBtnText}>set up my team →</Text>
-          </Pressable>
-        </View>
+          <Text style={hv.onboardingBody}>Join or create a team to track your group's lunch history.</Text>
+          <Button label="set up my team →" onPress={() => navigation.navigate('You')} variant="primary" style={hv.onboardingBtn} />
+        </Card>
       </View>
     );
   }
@@ -38,16 +37,8 @@ export default function HistoryView() {
     .slice()
     .reverse();
 
-  if (past.length === 0) {
-    return (
-      <View style={hv.center}>
-        <Text style={hv.empty}>no past lunches yet — the first one's coming up.</Text>
-      </View>
-    );
-  }
-
   const renderItem = ({ item: l }) => {
-    const attendees   = Object.entries(l.rsvps)
+    const attendees    = Object.entries(l.rsvps)
       .filter(([n, s]) => s === 'yes' && teammates.has(n))
       .map(([n]) => n);
     const lunchRatings = (ratings || {})[l.id] || {};
@@ -59,26 +50,24 @@ export default function HistoryView() {
     const totalRated = counts.fire + counts.meh + counts.never;
 
     return (
-      <View style={hi.item}>
-        <View style={hi.row}>
-          <Text style={hi.date}>{fmtDate(l.date)}</Text>
-          <Text style={hi.where} numberOfLines={1}>{l.restaurant || 'no spot picked'}</Text>
-          <View style={hi.whoRow}>
-            <Text style={hi.who} numberOfLines={1}>
-              {attendees.length > 0 ? attendees.join(', ') : 'ghost town'}
-            </Text>
-            <View style={hi.countBadge}>
-              <Text style={hi.countText}>{attendees.length}</Text>
-            </View>
+      <Card style={hi.card}>
+        <View style={hi.top}>
+          <Text style={hi.eyebrow}>{fmtDate(l.date)}</Text>
+          <View style={hi.countBadge}>
+            <Text style={hi.countText}>{attendees.length}</Text>
           </View>
         </View>
+        <Text style={hi.where} numberOfLines={1}>{l.restaurant || 'no spot picked'}</Text>
+        <Text style={hi.who} numberOfLines={1}>
+          {attendees.length > 0 ? attendees.join(', ') : 'ghost town'}
+        </Text>
 
         {l.restaurant && (
-          <View style={hi.ratingSection}>
-            <View style={hi.ratingSummary}>
+          <View style={hi.ratingRow}>
+            <View style={hi.tally}>
               {totalRated > 0
                 ? RATINGS.filter(r => counts[r.key] > 0).map(r => (
-                    <Text key={r.key} style={hi.ratingTally}>{r.emoji} {counts[r.key]}</Text>
+                    <Text key={r.key} style={hi.tallyItem}>{r.emoji} {counts[r.key]}</Text>
                   ))
                 : <Text style={hi.ratingNone}>no ratings yet</Text>
               }
@@ -88,7 +77,10 @@ export default function HistoryView() {
                 <Pressable
                   key={r.key}
                   style={[hi.ratingBtn, myRating === r.key && hi.ratingBtnActive]}
-                  onPress={() => setRating(l.id, myRating === r.key ? null : r.key)}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setRating(l.id, myRating === r.key ? null : r.key);
+                  }}
                 >
                   <Text style={hi.ratingEmoji}>{r.emoji}</Text>
                 </Pressable>
@@ -96,49 +88,59 @@ export default function HistoryView() {
             </View>
           </View>
         )}
-      </View>
+      </Card>
     );
   };
 
   return (
     <FlatList
+      style={{ backgroundColor: theme.colors.bg }}
       contentContainerStyle={hv.list}
       data={past}
       keyExtractor={l => l.id}
-      ListHeaderComponent={<Text style={hv.sectionLabel}>the archives</Text>}
+      ListHeaderComponent={
+        past.length > 0
+          ? <SectionHeader label={`${past.length} past lunch${past.length !== 1 ? 'es' : ''}`} style={hv.sectionHeader} />
+          : null
+      }
+      ListEmptyComponent={
+        <Card style={hv.empty}>
+          <Text style={hv.emptyText}>no past lunches yet</Text>
+          <Text style={hv.emptySub}>the first one's coming up.</Text>
+        </Card>
+      }
       renderItem={renderItem}
     />
   );
 }
 
 const hv = StyleSheet.create({
-  list:            { padding: SPACING.md, paddingBottom: SPACING.xl },
-  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
-  onboarding:      { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, alignItems: 'center', ...SHADOW.sm },
-  onboardingEmoji: { fontSize: 40, marginBottom: 8 },
-  onboardingTitle: { fontSize: 18, fontWeight: '800', color: COLORS.ink, marginBottom: 8, textAlign: 'center' },
-  onboardingBody:  { fontSize: 14, color: COLORS.ink3, textAlign: 'center', lineHeight: 20, marginBottom: SPACING.lg },
-  onboardingBtn:   { backgroundColor: COLORS.cherry, borderRadius: RADIUS.md, paddingHorizontal: 20, paddingVertical: 12 },
-  onboardingBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  sectionLabel:    { fontSize: 11, fontWeight: '700', color: COLORS.ink3, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: SPACING.sm },
-  empty:           { fontSize: 15, color: COLORS.ink3, textAlign: 'center' },
+  list:            { padding: theme.space.screen, paddingBottom: theme.space.xxl },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.space.screen },
+  onboarding:      { alignItems: 'center', gap: theme.space.md },
+  onboardingTitle: { ...theme.type.h2, textAlign: 'center' },
+  onboardingBody:  { ...theme.type.body, textAlign: 'center', color: theme.colors.muted },
+  onboardingBtn:   { marginTop: theme.space.sm },
+  sectionHeader:   { marginBottom: theme.space.sm },
+  empty:           { alignItems: 'center', gap: theme.space.sm, paddingVertical: theme.space.xl },
+  emptyText:       { ...theme.type.h2 },
+  emptySub:        { ...theme.type.meta },
 });
 
 const hi = StyleSheet.create({
-  item:         { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: 10, padding: 14, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.xs },
-  row:          { gap: 3, marginBottom: 8 },
-  date:         { fontSize: 12, fontWeight: '700', color: COLORS.cherry, textTransform: 'uppercase', letterSpacing: 0.3 },
-  where:        { fontSize: 16, fontWeight: '700', color: COLORS.ink },
-  whoRow:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  who:          { fontSize: 13, color: COLORS.ink3, flex: 1 },
-  countBadge:   { backgroundColor: COLORS.surface2, borderRadius: RADIUS.full, width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  countText:    { fontSize: 11, fontWeight: '700', color: COLORS.ink2 },
-  ratingSection:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
-  ratingSummary:{ flexDirection: 'row', gap: 8, flex: 1 },
-  ratingTally:  { fontSize: 13, color: COLORS.ink2 },
-  ratingNone:   { fontSize: 13, color: COLORS.ink4, fontStyle: 'italic' },
-  ratingBtns:   { flexDirection: 'row', gap: 6 },
-  ratingBtn:    { width: 36, height: 36, borderRadius: RADIUS.md, backgroundColor: COLORS.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  ratingBtnActive: { backgroundColor: COLORS.cherryLight, borderColor: COLORS.cherry },
-  ratingEmoji:  { fontSize: 18 },
+  card:    { marginBottom: theme.space.sm },
+  top:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  eyebrow: { ...theme.type.eyebrow },
+  countBadge: { backgroundColor: theme.colors.cream, borderRadius: theme.radius.pill, width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.line },
+  countText:  { fontSize: 11, fontWeight: '700', color: theme.colors.ink },
+  where:   { ...theme.type.h2, marginBottom: 3 },
+  who:     { ...theme.type.meta, marginBottom: theme.space.md },
+  ratingRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: theme.colors.line, paddingTop: theme.space.sm },
+  tally:      { flexDirection: 'row', gap: theme.space.sm, flex: 1 },
+  tallyItem:  { ...theme.type.meta, color: theme.colors.ink },
+  ratingNone: { ...theme.type.meta, fontStyle: 'italic' },
+  ratingBtns: { flexDirection: 'row', gap: theme.space.sm },
+  ratingBtn:  { width: 36, height: 36, borderRadius: theme.radius.chip, backgroundColor: theme.colors.cream, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.line },
+  ratingBtnActive: { backgroundColor: 'rgba(201,163,106,0.2)', borderColor: theme.colors.honey },
+  ratingEmoji:{ fontSize: 18 },
 });
