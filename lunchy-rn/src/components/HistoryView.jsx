@@ -23,7 +23,7 @@ export default function HistoryView() {
       <View style={hv.center}>
         <Card style={hv.onboarding}>
           <Text style={hv.onboardingTitle}>no history yet</Text>
-          <Text style={hv.onboardingBody}>Join or create a team to track your group's lunch history.</Text>
+          <Text style={hv.onboardingBody}>start a crew and your lunches will land here.</Text>
           <Button label="set up my team →" onPress={() => navigation.navigate('You')} variant="primary" style={hv.onboardingBtn} />
         </Card>
       </View>
@@ -105,8 +105,8 @@ export default function HistoryView() {
       }
       ListEmptyComponent={
         <Card style={hv.empty}>
-          <Text style={hv.emptyText}>no past lunches yet</Text>
-          <Text style={hv.emptySub}>the first one's coming up.</Text>
+          <Text style={hv.emptyText}>no history yet — your first lunch will land here.</Text>
+          <Text style={hv.emptySub}></Text>
         </Card>
       }
       renderItem={renderItem}

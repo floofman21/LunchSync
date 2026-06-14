@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Animated,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BRAND } from '../branding';
 import { theme } from '../theme';
-import OrbitMark from './OrbitMark';
+import CrumbIcon from './CrumbIcon';
 import { Button } from '../ui';
 
 export default function Gate({ onPick, teams }) {
@@ -18,7 +18,7 @@ export default function Gate({ onPick, teams }) {
     const trimmed = name.trim();
     if (!trimmed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('choose a username to continue');
+      setError("hmm, that code didn't match. double-check it?");
       return;
     }
     if (code.trim()) {
@@ -27,7 +27,7 @@ export default function Gate({ onPick, teams }) {
       );
       if (!team) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('team code not found — double-check it');
+        setError("hmm, that code didn't match. double-check it?");
         return;
       }
       onPick(trimmed, team.id);
@@ -43,17 +43,17 @@ export default function Gate({ onPick, teams }) {
     >
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <View style={s.hero}>
-          <OrbitMark size={52} ring={theme.colors.onDark} dot={theme.colors.honey} />
+          <CrumbIcon size={56} disc="#fff" crumb="#fff" bg={theme.colors.honey} />
           <Text style={s.brand}>{BRAND.name}</Text>
           <Text style={s.tagline}>{BRAND.tagline}</Text>
         </View>
 
         <View style={s.card}>
-          <Text style={s.eyebrow}>get started</Text>
+          <Text style={s.eyebrow}>hey — let's get the crew fed</Text>
 
           <TextInput
             style={s.input}
-            placeholder="choose a username"
+            placeholder="what should we call you?"
             placeholderTextColor={theme.colors.muted}
             value={name}
             onChangeText={v => { setName(v); setError(''); }}
@@ -64,7 +64,7 @@ export default function Gate({ onPick, teams }) {
           />
           <TextInput
             style={s.input}
-            placeholder="team code (optional)"
+            placeholder="join with a code (optional)"
             placeholderTextColor={theme.colors.muted}
             value={code}
             onChangeText={v => { setCode(v.toUpperCase()); setError(''); }}
@@ -101,8 +101,8 @@ const s = StyleSheet.create({
     gap: theme.space.sm,
   },
   brand: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '600',
     color: theme.colors.onDark,
     letterSpacing: -0.5,
     marginTop: theme.space.sm,
@@ -110,6 +110,7 @@ const s = StyleSheet.create({
   tagline: {
     ...theme.type.meta,
     color: theme.colors.onDarkMuted,
+    fontStyle: 'italic',
   },
 
   card: {
@@ -131,7 +132,7 @@ const s = StyleSheet.create({
     borderRadius: theme.radius.chip,
     paddingHorizontal: theme.space.md,
     paddingVertical: theme.space.md,
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.ink,
     backgroundColor: theme.colors.cream,
     marginBottom: theme.space.sm,

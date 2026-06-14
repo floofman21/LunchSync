@@ -152,8 +152,8 @@ export default function SpotsView() {
     return (
       <View style={sv.center}>
         <Card style={sv.onboarding}>
-          <Text style={sv.onboardingTitle}>no spots yet</Text>
-          <Text style={sv.onboardingBody}>Join or create a team to build your crew's restaurant rotation.</Text>
+          <Text style={sv.onboardingTitle}>no spots yet. where do you all actually eat?</Text>
+          <Text style={sv.onboardingBody}>start a crew and add your go-to places.</Text>
           <Button label="set up my team →" onPress={() => navigation.navigate('You')} variant="primary" style={sv.onboardingBtn} />
         </Card>
       </View>

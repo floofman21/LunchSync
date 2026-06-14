@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppContext } from '../AppContext';
 import { BRAND } from '../branding';
 import { theme } from '../theme';
-import OrbitMark from './OrbitMark';
+import CrumbIcon from './CrumbIcon';
 import { Avatar } from '../ui';
 
 export default function AppHeader() {
@@ -17,7 +17,7 @@ export default function AppHeader() {
   return (
     <View style={[s.bar, { paddingTop: insets.top + 6 }]}>
       <View style={s.brand}>
-        <OrbitMark size={24} ring={theme.colors.espresso} dot={theme.colors.honey} />
+        <CrumbIcon size={24} />
         <View style={s.brandText}>
           <Text style={s.brandName}>{BRAND.name}</Text>
           {activeTeam && (
