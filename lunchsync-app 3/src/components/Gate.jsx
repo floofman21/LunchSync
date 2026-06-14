@@ -24,7 +24,7 @@ export default function Gate({ onPick, teams }) {
     <div className="gate">
       <div className="gate-card">
         <div className="gate-eyebrow">welcome to</div>
-        <h1 className="gate-title">LunchSync</h1>
+        <h1 className="gate-title">AppName</h1>
         <div className="gate-sub">your team lunch planner</div>
 
         <div className="gate-fields">
