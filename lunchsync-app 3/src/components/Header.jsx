@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Header({ me, syncStatus, onSwitchUser, activeTeam }) {
+export default function Header({ me, onSwitchUser, activeTeam }) {
   return (
     <header className="header">
       <div className="brand">
@@ -21,10 +21,6 @@ export default function Header({ me, syncStatus, onSwitchUser, activeTeam }) {
         </div>
       </div>
       <div className="header-actions">
-        <div className="sync-dot" title={syncStatus === 'offline' ? 'you\'re offline' : syncStatus === 'syncing' ? 'saving…' : 'in sync'}>
-          <span className={`sync-dot-light ${syncStatus}`}/>
-          <span>{syncStatus === 'offline' ? 'offline' : syncStatus === 'syncing' ? 'syncing' : 'live'}</span>
-        </div>
         <button className="me-chip" onClick={onSwitchUser} title="not you? switch">
           <span className="me-dot"/>
           <span>you're <strong>{me}</strong></span>

@@ -8,11 +8,8 @@ import CrumbIcon from './CrumbIcon';
 import { Avatar } from '../ui';
 
 export default function AppHeader() {
-  const { me, syncStatus, activeTeam, handleSwitchUser } = useAppContext();
+  const { me, activeTeam, handleSwitchUser } = useAppContext();
   const insets = useSafeAreaInsets();
-
-  const isLive    = syncStatus === 'ok';
-  const isSyncing = syncStatus === 'syncing';
 
   return (
     <View style={[s.bar, { paddingTop: insets.top + 6 }]}>
@@ -29,7 +26,6 @@ export default function AppHeader() {
       </View>
 
       <View style={s.right}>
-        <View style={[s.syncDot, isLive && s.syncLive, isSyncing && s.syncSyncing]} />
         {me ? (
           <Pressable style={s.meChip} onPress={handleSwitchUser}>
             <Avatar name={me} size="sm" />
@@ -73,19 +69,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: theme.space.sm,
   },
-  syncDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: theme.colors.line,
-  },
-  syncLive: {
-    backgroundColor: theme.colors.sage,
-  },
-  syncSyncing: {
-    backgroundColor: theme.colors.honey,
-  },
-
   meChip: {
     flexDirection: 'row',
     alignItems: 'center',
