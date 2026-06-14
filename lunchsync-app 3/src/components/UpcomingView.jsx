@@ -85,7 +85,7 @@ function AddLunchForm({ onAdd, onCancel }) {
 
   return (
     <div className="add-lunch-form">
-      <div className="add-lunch-form-label">schedule a lunch</div>
+      <div className="add-lunch-form-label">plan a lunch</div>
       <div className="add-lunch-fields">
         <input
           type="date"
@@ -131,7 +131,7 @@ function AddLunchTrigger({ onAdd }) {
     <div className="add-lunch-wrap">
       <button className="add-lunch-trigger" onClick={() => setOpen(true)}>
         <Plus size={15} />
-        schedule a lunch
+        plan a lunch
       </button>
     </div>
   );
@@ -168,8 +168,8 @@ export default function UpcomingView({
       <div>
         <div className="empty-lunches">
           <div className="empty-lunches-emoji">📅</div>
-          <div className="empty-lunches-text">no lunches scheduled yet</div>
-          <div className="empty-lunches-sub">pick a date and time to get started</div>
+          <div className="empty-lunches-text">no plans yet</div>
+          <div className="empty-lunches-sub">dangerously quiet. start one?</div>
         </div>
         <AddLunchTrigger onAdd={addLunch} />
       </div>
@@ -188,7 +188,7 @@ export default function UpcomingView({
         ) : (
           <button className="add-lunch-top-btn" onClick={() => setAddOpen(true)}>
             <Plus size={14} />
-            schedule a lunch
+            plan a lunch
           </button>
         )}
       </div>
@@ -208,7 +208,7 @@ export default function UpcomingView({
         onRemove={() => removeLunch(next.id)}
       />
       <div className="future">
-        <div className="section-label">what's coming up</div>
+        <div className="section-label">coming up</div>
         {rest.length > 0 && (
           <div className="future-grid">
             {rest.slice(0, 8).map(l => (
@@ -433,7 +433,7 @@ function FutureCard({ lunch, me, setRsvp, onRemove }) {
         </button>
       </div>
       <div className="future-where">{lunch.restaurant || <em>tbd</em>}</div>
-      <div className="future-yes">{yesCount > 0 ? `${yesCount} ${yesCount === 1 ? 'person' : 'people'} in` : 'crickets so far'}</div>
+      <div className="future-yes">{yesCount > 0 ? `${yesCount} ${yesCount === 1 ? 'person' : 'people'} in` : 'no rsvps yet'}</div>
       <div className="future-rsvp">
         <button className={`mini-rsvp ${myRsvp === 'yes' ? 'on yes' : ''}`} onClick={() => setRsvp(lunch.id, 'yes')} title="in"><Check size={12} /></button>
         <button className={`mini-rsvp ${myRsvp === 'maybe' ? 'on maybe' : ''}`} onClick={() => setRsvp(lunch.id, 'maybe')} title="maybe"><HelpCircle size={12} /></button>

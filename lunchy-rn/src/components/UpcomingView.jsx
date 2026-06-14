@@ -62,7 +62,7 @@ function AddLunchForm({ onAdd, onCancel }) {
 
   return (
     <Card style={af.wrap}>
-      <Text style={af.eyebrow}>schedule a lunch</Text>
+      <Text style={af.eyebrow}>plan a lunch</Text>
       <View style={af.row}>
         <Pressable style={af.datePill} onPress={() => setPickerMode('date')}>
           <Text style={af.datePillText}>{fmtDate(isoDate)}</Text>
@@ -395,7 +395,7 @@ export default function UpcomingView() {
         <Card style={uv.onboarding}>
           <Text style={uv.onboardingTitle}>you're not on a team yet</Text>
           <Text style={uv.onboardingBody}>Create one for your crew or enter a code someone shared with you.</Text>
-          <Button label="set up my team →" onPress={() => navigation.navigate('You')} variant="primary" style={uv.onboardingBtn} />
+          <Button label="set up your crew →" onPress={() => navigation.navigate('You')} variant="primary" style={uv.onboardingBtn} />
         </Card>
       </ScrollView>
     );
@@ -417,13 +417,13 @@ export default function UpcomingView() {
         ) : (
           <Pressable style={uv.scheduleBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAddOpen(true); }}>
             <Plus size={14} color={theme.colors.honey} />
-            <Text style={uv.scheduleBtnText}>schedule a lunch</Text>
+            <Text style={uv.scheduleBtnText}>plan a lunch</Text>
           </Pressable>
         )}
 
         {upcoming.length === 0 ? (
           <Card style={uv.empty}>
-            <Text style={uv.emptyTitle}>no lunches scheduled</Text>
+            <Text style={uv.emptyTitle}>no plans yet</Text>
             <Text style={uv.emptySub}>pick a date and time above to get started</Text>
           </Card>
         ) : (
@@ -438,7 +438,7 @@ export default function UpcomingView() {
             {/* Future list */}
             {upcoming.length > 1 && (
               <>
-                <SectionHeader label="what's coming up" style={uv.sectionHeader} />
+                <SectionHeader label="coming up" style={uv.sectionHeader} />
                 {upcoming.slice(1, 8).map(l => (
                   <FutureCard key={l.id} lunch={l} me={me} setRsvp={setRsvp} onRemove={() => removeLunch(l.id)} />
                 ))}

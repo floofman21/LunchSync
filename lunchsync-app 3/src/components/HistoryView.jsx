@@ -34,12 +34,12 @@ export default function HistoryView({ lunches, me, teams, ratings, setRating, se
     .reverse();
 
   if (past.length === 0) {
-    return <div className="empty">no past lunches yet — the first one's coming up.</div>;
+    return <div className="empty">no history yet — your first lunch will land here.</div>;
   }
 
   return (
     <div>
-      <div className="section-label">the archives</div>
+      <div className="section-label">past lunches</div>
       <div className="history-list">
         {past.map(l => {
           // Only list teammates who attended

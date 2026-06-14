@@ -106,7 +106,7 @@ function AppShell() {
     return (
       <View style={s.loading}>
         <ActivityIndicator size="large" color={theme.colors.honey} />
-        <Text style={s.loadingText}>setting the table…</Text>
+        <Text style={s.loadingText}>one sec…</Text>
       </View>
     );
   }

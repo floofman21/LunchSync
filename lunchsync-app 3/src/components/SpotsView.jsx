@@ -138,7 +138,7 @@ export default function SpotsView({ restaurants, lunches, me, teams, addRestaura
 
   return (
     <div>
-      <div className="section-label">the rotation</div>
+      <div className="section-label">your spots</div>
       <div className="hint" style={{ marginBottom: '1.2rem' }}>
         {restaurants.length} places on the list · tag dietary accommodations · ratings from past visits
       </div>
