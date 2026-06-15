@@ -150,7 +150,7 @@ export default function UpcomingView({
     return (
       <div className="onboarding-card">
         <div className="onboarding-emoji">🥪</div>
-        <h2 className="onboarding-title">welcome to LunchSync</h2>
+        <h2 className="onboarding-title">welcome to Crumb</h2>
         <p className="onboarding-body">
           You're not on a team yet. Create one for your crew or enter a code someone shared with you.
         </p>
